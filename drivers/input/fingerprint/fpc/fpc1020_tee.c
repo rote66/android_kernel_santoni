@@ -45,7 +45,10 @@
 #include <linux/platform_device.h>
 #include <linux/wakelock.h>
 #include <linux/input.h>
-#include <linux/display_state.h>
+#ifdef CONFIG_FB
+#include <linux/notifier.h>
+#include <linux/fb.h>
+#endif
 
 /* Fake FP Key */
 #define KEY_FINGERPRINT 0x2ee
@@ -74,6 +77,9 @@ struct fpc1020_data {
 	u32 max_speed_hz;
 	struct clk *iface_clk;
 	struct clk *core_clk;
+#endif
+#ifdef CONFIG_FB
+	struct notifier_block fpc1020_notifier;
 #endif
 
 	struct wake_lock ttw_wl;
@@ -315,6 +321,33 @@ static ssize_t wakeup_enable_set(struct device *dev,
 }
 static DEVICE_ATTR(wakeup_enable, S_IWUSR, NULL, wakeup_enable_set);
 
+#ifdef CONFIG_FB
+static int fpc1020_notifier_cb(struct notifier_block *self,
+		unsigned long event, void *data)
+{
+	struct fb_event *evdata = data;
+	struct fpc1020_data *fpc1020 =
+			container_of(self, struct fpc1020_data, fpc1020_notifier);
+	int *blank;
+
+	if (evdata && evdata->data &&
+		event == FB_EVENT_BLANK && fpc1020) {
+		blank = evdata->data;
+		if (*blank == FB_BLANK_UNBLANK)
+		{
+			if (fpc1020->wakeup_enabled)
+				fpc1020->wakeup_enabled = false;
+		}
+		else if (*blank == FB_BLANK_POWERDOWN)
+		{
+			if (!fpc1020->wakeup_enabled)
+				fpc1020->wakeup_enabled = true;
+		}
+	}
+
+	return 0;
+}
+#endif
 
 /**
  * sysf node to check the interrupt status of the sensor, the interrupt
@@ -504,7 +537,7 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *handle)
 
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
 
-	if (!is_display_on()) {
+	if (fpc1020->wakeup_enabled) {
 		if (!fpc1020->boosted) {
 			ret = sched_set_boost(1);
 			if (!ret)
@@ -596,7 +629,7 @@ static int fpc1020_probe(struct platform_device *pdev)
 		goto exit;
 		*/
 
-	fpc1020->wakeup_enabled = false;
+	fpc1020->wakeup_enabled = true;
 	fpc1020->boosted = false;
 #ifdef LINUX_CONTROL_SPI_CLK
 	fpc1020->clocks_enabled = false;
@@ -608,6 +641,11 @@ static int fpc1020_probe(struct platform_device *pdev)
 		goto exit;
 
 	mutex_init(&fpc1020->lock);
+
+#ifdef CONFIG_FB
+	fpc1020->fpc1020_notifier.notifier_call = fpc1020_notifier_cb;
+	fb_register_client(&fpc1020->fpc1020_notifier);
+#endif
 
 	wake_lock_init(&fpc1020->ttw_wl, WAKE_LOCK_SUSPEND, "fpc_ttw_wl");
 
@@ -631,6 +669,9 @@ static int fpc1020_remove(struct platform_device *pdev)
 
 	sysfs_remove_group(&pdev->dev.kobj, &attribute_group);
 	mutex_destroy(&fpc1020->lock);
+#ifdef CONFIG_FB
+	fb_unregister_client(&fpc1020->fpc1020_notifier);
+#endif
 	wake_lock_destroy(&fpc1020->ttw_wl);
 	dev_info(&pdev->dev, "%s\n", __func__);
 	return 0;
