@@ -68,7 +68,7 @@ include/config
 include/generated
 arch/*/include/generated
 
-repack_zip/boot/zImage
+repack_zip/clarity/zImage
 repack_zip/system/lib/modules/*.ko
 
 # stgit generated dirs
