@@ -28,7 +28,7 @@ fi;
 if [ -f /tmp/clarity/boot.img-oslevel ]; then
 	osvel=`cat /tmp/clarity/boot.img-oslevel`;
 else
-	osvel=2017-11;
+	osvel=2018-01;
 fi;
 
 /tmp/clarity/mkbootimg --kernel /tmp/clarity/zImage --ramdisk /tmp/clarity/boot.img-ramdisk.gz --cmdline "$cmdline" --board "$board" --base $base --pagesize $pagesize --kernel_offset $kerneloff --ramdisk_offset $ramdiskoff --second_offset $secondoff --tags_offset "$tagsoff" --os_version "$osver" --os_patch_level "$osvel" --hash "$hashfck" --output /tmp/clarity/newboot.img;
