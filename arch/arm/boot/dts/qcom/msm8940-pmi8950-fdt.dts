@@ -6993,7 +6993,7 @@
 					qcom,set = <0x3>;
 					status = "okay";
 					regulator-min-microvolt = <0x12b128>;
-					regulator-max-microvolt = <0x149970>;
+					regulator-max-microvolt = <0x13d620>;
 					qcom,init-voltage = <0x12b128>;
 					linux,phandle = <0xef>;
 					phandle = <0xef>;
