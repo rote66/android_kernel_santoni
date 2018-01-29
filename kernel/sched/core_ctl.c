@@ -982,6 +982,48 @@ static struct notifier_block __refdata cpu_notifier = {
 	.notifier_call = cpu_callback,
 };
 
+/* extern for core_ctl_suspend */
+#ifdef CONFIG_CORE_CTL_SUSPEND
+static void main_work(bool suspended)
+{
+	struct cpu_data *state;
+	unsigned int cpu;
+
+	for_each_possible_cpu(cpu) {
+		state = &per_cpu(cpu_state, cpu);
+
+		/* if not first cpu ie. 0 & 4. skip it */
+		if (state->cpu != state->first_cpu)
+			continue;
+
+		if (suspended) {
+			state->max_cpus = 1;
+			/* update early before disabled */
+			wake_up_hotplug_thread(state);
+			state->disabled = true;
+		} else {
+			state->max_cpus = 4;
+			/* update lately after enabled */
+			state->disabled = false;
+			wake_up_hotplug_thread(state);
+		}
+	}
+}
+
+void resume_core_ctl(void)
+{
+	main_work(false);
+}
+EXPORT_SYMBOL(resume_core_ctl);
+
+void suspend_core_ctl(void)
+{
+	main_work(true);
+}
+EXPORT_SYMBOL(suspend_core_ctl);
+#endif
+/* extern for core_ctl_suspend */
+
 /* ============================ init code ============================== */
 
 static int group_init(struct cpumask *mask)

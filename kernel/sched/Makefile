@@ -26,3 +26,4 @@ obj-$(CONFIG_SCHEDSTATS) += stats.o
 obj-$(CONFIG_SCHED_DEBUG) += debug.o
 obj-$(CONFIG_CGROUP_CPUACCT) += cpuacct.o
 obj-$(CONFIG_SCHED_CORE_CTL) += core_ctl.o
+obj-$(CONFIG_CORE_CTL_SUSPEND) += core_ctl_suspend.o
