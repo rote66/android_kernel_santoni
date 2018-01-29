@@ -1208,6 +1208,18 @@ config SCHED_CORE_CTL
 
 	  If unsure, say N here.
 
+config CORE_CTL_SUSPEND
+	bool "Allow 'QTI Core Control' disable on suspend"
+	depends on SCHED_CORE_CTL
+	help
+	  This options allow "QTI Core Control" disable on suspend
+	  while "QTI Core Control" suspend the system will leave 2
+	  cores online only to save power.
+	  After resume triggered by screen on, the system will
+	  enabling "QTI Core Control" to control core again.
+
+	  If unsure, say N here.
+
 config SCHED_QHMP
 	bool "QHMP scheduler extensions"
 	depends on SCHED_HMP
