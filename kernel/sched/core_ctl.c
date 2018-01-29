@@ -999,9 +999,8 @@ static void main_work(bool suspended)
 		if (state->cpu != state->first_cpu)
 			continue;
 
-		state->prev_min_cpus = state->min_cpus;
-
 		if (suspended) {
+			state->prev_min_cpus = state->min_cpus;
 			state->min_cpus = 1;
 			state->max_cpus = 2;
 			/* update early before disabled */
