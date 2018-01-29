@@ -41,6 +41,9 @@ struct cpu_data {
 	/* Per cluster data set only on first CPU */
 	unsigned int min_cpus;
 	unsigned int max_cpus;
+#ifdef CONFIG_CORE_CTL_SUSPEND
+	unsigned int prev_min_cpus;
+#endif
 	unsigned int offline_delay_ms;
 	unsigned int busy_up_thres[MAX_CPUS_PER_GROUP];
 	unsigned int busy_down_thres[MAX_CPUS_PER_GROUP];
@@ -996,15 +999,19 @@ static void main_work(bool suspended)
 		if (state->cpu != state->first_cpu)
 			continue;
 
+		state->prev_min_cpus = state->min_cpus;
+
 		if (suspended) {
-			state->max_cpus = 1;
+			state->min_cpus = 1;
+			state->max_cpus = 2;
 			/* update early before disabled */
 			wake_up_hotplug_thread(state);
 			state->disabled = true;
 		} else {
+			state->min_cpus = state->prev_min_cpus;
 			state->max_cpus = 4;
-			/* update lately after enabled */
 			state->disabled = false;
+			/* update lately after enabled */
 			wake_up_hotplug_thread(state);
 		}
 	}

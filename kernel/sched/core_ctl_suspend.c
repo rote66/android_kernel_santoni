@@ -19,7 +19,7 @@
 #include <linux/notifier.h>
 #include <linux/fb.h>
 
-
+/* 2 seconds for enter suspend */
 #define DEF_SUSPEND_TIME 2000
 
 /* Worker */
@@ -60,7 +60,7 @@ static int corectl_notifier_cb(struct notifier_block *nb,
 				booted = true;
 				return 0;
 			}
-			cancel_delayed_work(&suspend_work);
+			cancel_delayed_work_sync(&suspend_work);
 			schedule_work(&resume_work);
 		} else if (*blank == FB_BLANK_POWERDOWN) {
 			flush_work(&resume_work);
