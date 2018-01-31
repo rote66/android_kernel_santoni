@@ -29,21 +29,20 @@ static struct work_struct resume_work;
 /* Notifier block */
 static struct notifier_block ctl_nb;
 
-/* functions from core_ctl */
-extern void resume_core_ctl(void);
-extern void suspend_core_ctl(void);
-
 /* prevent scheduling work when device on boot */
 static bool booted = false;
 
+/* functions from core_ctl */
+extern void core_ctl_suspend_work(bool suspended);
+
 static void corectl_resume(struct work_struct *work)
 {
-	resume_core_ctl();
+	core_ctl_suspend_work(false);
 }
 
 static void corectl_suspend(struct work_struct *work)
 {
-	suspend_core_ctl();
+	core_ctl_suspend_work(true);
 }
 
 static int corectl_notifier_cb(struct notifier_block *nb,
