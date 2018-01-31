@@ -1,0 +1,7 @@
+#!/bin/bash
+
+rm -f repack_zip/clarity/zImage
+rm -f drivers/platform/msm/ipa/ipa_common
+
+make clean && make mrproper
+

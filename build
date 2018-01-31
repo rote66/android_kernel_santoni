@@ -1,0 +1,16 @@
+#!/bin/bash
+
+VER=$1
+SUB=$2
+
+rm -f repack_zip/clarity/zImage
+
+mv arch/arm64/boot/Image.gz-dtb repack_zip/clarity/zImage
+
+cd repack_zip
+
+if [ ! $VER ] && [ ! $SUB ]; then
+	zip -r ../../release_testing/Clarity-Testing-Oreo_HM4X.zip *
+else
+	zip -r ../../release_santoni/Clarity-v$VER.$SUB-Oreo_HM4X.zip *
+fi
