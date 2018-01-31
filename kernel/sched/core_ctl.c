@@ -987,7 +987,7 @@ static struct notifier_block __refdata cpu_notifier = {
 
 /* extern for core_ctl_suspend */
 #ifdef CONFIG_CORE_CTL_SUSPEND
-static void main_work(bool suspended)
+void core_ctl_suspend_work(bool suspended)
 {
 	struct cpu_data *state;
 	unsigned int cpu;
@@ -1015,18 +1015,7 @@ static void main_work(bool suspended)
 		}
 	}
 }
-
-void resume_core_ctl(void)
-{
-	main_work(false);
-}
-EXPORT_SYMBOL(resume_core_ctl);
-
-void suspend_core_ctl(void)
-{
-	main_work(true);
-}
-EXPORT_SYMBOL(suspend_core_ctl);
+EXPORT_SYMBOL(core_ctl_suspend_work);
 #endif
 /* extern for core_ctl_suspend */
 
