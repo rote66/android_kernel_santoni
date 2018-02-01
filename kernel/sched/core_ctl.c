@@ -63,6 +63,9 @@ struct cpu_data {
 	struct task_struct *hotplug_thread;
 	struct kobject kobj;
 	struct list_head pending_lru;
+#ifdef CONFIG_CORE_CTL_SUSPEND
+	bool prev_disabled;
+#endif
 	bool disabled;
 };
 
@@ -361,6 +364,10 @@ static ssize_t store_disable(struct cpu_data *state,
 		return count;
 
 	state->disabled = val;
+
+#ifdef CONFIG_CORE_CTL_SUSPEND
+	state->prev_disabled = state->disabled;
+#endif
 
 	if (!state->disabled)
 		wake_up_hotplug_thread(state);
@@ -999,6 +1006,12 @@ void core_ctl_suspend_work(bool suspended)
 		if (state->cpu != state->first_cpu)
 			continue;
 
+		if (state->prev_disabled) {
+			pr_info("%s: core control disabled by user, exit now\n",
+				__func__);
+			break;
+		}
+
 		if (suspended) {
 			state->prev_min_cpus = state->min_cpus;
 			state->min_cpus = 1;
@@ -1051,6 +1064,9 @@ static int group_init(struct cpumask *mask)
 	f->offline_delay_ms = 100;
 	f->task_thres = UINT_MAX;
 	f->nrrun = f->num_cpus;
+#ifdef CONFIG_CORE_CTL_SUSPEND
+	f->prev_disabled = 0;
+#endif
 	INIT_LIST_HEAD(&f->lru);
 	INIT_LIST_HEAD(&f->pending_lru);
 	init_timer(&f->timer);
