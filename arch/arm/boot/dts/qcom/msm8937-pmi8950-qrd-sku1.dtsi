@@ -47,8 +47,8 @@
 
 	i2c@78b7000 {
 		status = "ok";
-		focaltech@38 {
-			compatible = "focaltech,5x06"; //Our tp is FT5336
+		ftech@38 {
+			compatible = "focaltech,5336"; //Our tp is FT5336
 			reg = <0x38>; // 38
 			interrupt-parent = <&tlmm>; // a7
 			interrupts = <65 8200>;
@@ -58,31 +58,31 @@
 			pinctrl-0 = <&ts_int_active &ts_reset_active>; // d0 d1
 			pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>; // d2 d3
 			pinctrl-2 = <&ts_release>; // d4
-			focaltech,name = "ft5336";
-			focaltech,family-id = <0x36>;
-			focaltech,reset-gpio = <&tlmm 64 0>; //a7
-			focaltech,irq-gpio = <&tlmm 65 8200>; //a7
-			focaltech,display-coords = <0 0 720 1280>;
-			focaltech,panel-coords = <0 0 720 1280>;
-			focaltech,virtual-key1 = <139 140 2000>; //menu
-			focaltech,virtual-key2 = <172 360 2000>; //home
-			focaltech,virtual-key3 = <158 580 2000>; //back
+			ftech,name = "ft5336";
+			ftech,family-id = <0x36>;
+			ftech,reset-gpio = <&tlmm 64 0>; //a7
+			ftech,irq-gpio = <&tlmm 65 8200>; //a7
+			ftech,display-coords = <0 0 720 1280>;
+			ftech,panel-coords = <0 0 720 1280>;
+			ftech,virtual-key1 = <139 140 2000>; //menu
+			ftech,virtual-key2 = <172 360 2000>; //home
+			ftech,virtual-key3 = <158 580 2000>; //back
 			//focaltech,fw-vkey-support;
-			focaltech,button-map = <139 172 158>;			
-			focaltech,no-force-update;
-			focaltech,i2c-pull-up;
-			focaltech,group-id = <1>;
-			focaltech,hard-reset-delay-ms = <20>;
-			focaltech,soft-reset-delay-ms = <200>;
-			focaltech,num-max-touches = <10>;
-			focaltech,fw-delay-aa-ms = <30>;
-			focaltech,fw-delay-55-ms = <30>;
-			focaltech,fw-upgrade-id1 = <121>;
-			focaltech,fw-upgrade-id2 = <24>;
-			focaltech,fw-delay-readid-ms = <10>;
-			focaltech,fw-delay-era-flsh-ms = <2000>;
-			focaltech,fw-auto-cal;
-			focaltech,ignore-id-check;
+			//focaltech,button-map = <139 172 158>;			
+			ftech,no-force-update;
+			ftech,i2c-pull-up;
+			ftech,group-id = <1>;
+			ftech,hard-reset-delay-ms = <20>;
+			ftech,soft-reset-delay-ms = <200>;
+			ftech,num-max-touches = <10>;
+			ftech,fw-delay-aa-ms = <30>;
+			ftech,fw-delay-55-ms = <30>;
+			ftech,fw-upgrade-id1 = <121>;
+			ftech,fw-upgrade-id2 = <24>;
+			ftech,fw-delay-readid-ms = <10>;
+			ftech,fw-delay-era-flsh-ms = <2000>;
+			ftech,fw-auto-cal;
+			ftech,ignore-id-check;
 		};
 		synaptics@4b {
 			/*compatible = "synaptics,dsx";
@@ -110,9 +110,9 @@
 		};
 	};
 
-	gen-vkey {
+	gen-vkey1 {
 			compatible = "qcom,gen-vkeys";
-			label = "ft5x06_ts";
+			label = "ft5x06_720p";
 			qcom,disp-maxx = <720>; //<0x2d0>;
 			qcom,disp-maxy = <1280>; //<0x500>;
 			qcom,panel-maxx = <720>; //<0x2d0>;
