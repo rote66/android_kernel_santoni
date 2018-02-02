@@ -1,8 +1,10 @@
 assert(getprop("ro.product.device") == "santoni" || getprop("ro.build.product") == "santoni" || abort("E3004: This package is for device: santoni; this device is " + getprop("ro.product.device") + "."););
+ifelse(is_mounted("/system"), unmount("/system"));
+mount("ext4", "EMMC", "/dev/block/bootdevice/by-name/system", "/system", "max_batch_time=0,commit=1,data=ordered,barrier=1,errors=panic,nodelalloc");
 ui_print("-----------------------------------");
 ui_print("-         Clarity Kernel          -");
 ui_print("-----------------------------------");
-ui_print("-              OREO               -");
+ui_print("-         NOUGAT - OREO           -");
 ui_print("-----------------------------------");
 ui_print("-    Redmi 4X | HM4X | Santoni    -");
 ui_print("-----------------------------------");
@@ -31,4 +33,5 @@ ui_print("-----------------------------------");
 ui_print("-  https://ryan-andri.github.io   -");
 ui_print("-----------------------------------");
 delete_recursive("/tmp/clarity");
+ifelse(is_mounted("/system"), unmount("/system"));
 set_progress(1.000000);

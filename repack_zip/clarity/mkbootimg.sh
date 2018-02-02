@@ -22,7 +22,10 @@ fi;
 if [ -f /tmp/clarity/boot.img-osversion ]; then
 	osver=`cat /tmp/clarity/boot.img-osversion`;
 else
-	osver=7.1.2;
+	# Get Android version.
+	OSVERSION=`cat /system/build.prop | grep ro.build.version.release=`;
+	# Get 5 chars of the last string (ie 7.1.2).
+	osver=${OSVERSION:${#OSVERSION}-5:${#OSVERSION}};
 fi;
 
 if [ -f /tmp/clarity/boot.img-oslevel ]; then
