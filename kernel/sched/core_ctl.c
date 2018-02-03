@@ -43,6 +43,7 @@ struct cpu_data {
 	unsigned int max_cpus;
 #ifdef CONFIG_CORE_CTL_SUSPEND
 	unsigned int prev_min_cpus;
+	unsigned int prev_max_cpus;
 #endif
 	unsigned int offline_delay_ms;
 	unsigned int busy_up_thres[MAX_CPUS_PER_GROUP];
@@ -63,9 +64,6 @@ struct cpu_data {
 	struct task_struct *hotplug_thread;
 	struct kobject kobj;
 	struct list_head pending_lru;
-#ifdef CONFIG_CORE_CTL_SUSPEND
-	bool prev_disabled;
-#endif
 	bool disabled;
 };
 
@@ -364,10 +362,6 @@ static ssize_t store_disable(struct cpu_data *state,
 		return count;
 
 	state->disabled = val;
-
-#ifdef CONFIG_CORE_CTL_SUSPEND
-	state->prev_disabled = state->disabled;
-#endif
 
 	if (!state->disabled)
 		wake_up_hotplug_thread(state);
@@ -1006,24 +1000,25 @@ void core_ctl_suspend_work(bool suspended)
 		if (state->cpu != state->first_cpu)
 			continue;
 
-		if (state->prev_disabled) {
-			pr_info("%s: core control disabled by user, exit now\n",
+		if (state->disabled) {
+			pr_info("%s: core control disabled by user, skip now\n",
 				__func__);
-			break;
+			continue;
 		}
 
 		if (suspended) {
+			/* record min/max to prev for restoring later */
 			state->prev_min_cpus = state->min_cpus;
+			state->prev_max_cpus = state->max_cpus;
+
+			/* limit min/max cpu */
 			state->min_cpus = 1;
 			state->max_cpus = 2;
-			/* update early before disabled */
 			wake_up_hotplug_thread(state);
-			state->disabled = true;
 		} else {
+			/* restore to user or previous min/max cpu */
 			state->min_cpus = state->prev_min_cpus;
-			state->max_cpus = 4;
-			state->disabled = false;
-			/* update lately after enabled */
+			state->max_cpus = state->prev_max_cpus;
 			wake_up_hotplug_thread(state);
 		}
 	}
@@ -1064,9 +1059,6 @@ static int group_init(struct cpumask *mask)
 	f->offline_delay_ms = 100;
 	f->task_thres = UINT_MAX;
 	f->nrrun = f->num_cpus;
-#ifdef CONFIG_CORE_CTL_SUSPEND
-	f->prev_disabled = 0;
-#endif
 	INIT_LIST_HEAD(&f->lru);
 	INIT_LIST_HEAD(&f->pending_lru);
 	init_timer(&f->timer);

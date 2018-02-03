@@ -1,11 +1,11 @@
 /*
  * Copyright (C) 2018, Ryan Andri <https://github.com/ryan-andri>
  *
- * Lightweight utility for dynamic disable/enable "sched core control"
- * Based on FB Notifier. Purposed to disabling sched core control
- * after limiting max cpu to '1' while device on suspend state.
- * when resume triggered by screen on, enable again sched core control
- * after restoring max cpu to '4' for each cpu cluster.
+ * Lightweight utility for dynamic limit min/max cpu "sched core control"
+ * Based on FB Notifier. Purposed to limiting min/max cpu for each cluster
+ * while device on suspend state. when resume triggered by screen on,
+ * restoring again min/max cpu to user config (previous) min/max
+ * for each cpu cluster.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
