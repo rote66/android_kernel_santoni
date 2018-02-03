@@ -1209,14 +1209,15 @@ config SCHED_CORE_CTL
 	  If unsure, say N here.
 
 config CORE_CTL_SUSPEND
-	bool "Allow 'QTI Core Control' disable on suspend"
+	bool "Limit min/max cpu 'QTI Core Control' on suspend"
 	depends on SCHED_CORE_CTL
+	default n
 	help
-	  This options allow "QTI Core Control" disable on suspend
-	  while "QTI Core Control" suspend the system will leave 2
-	  cores online only to save power.
-	  After resume triggered by screen on, the system will
-	  enabling "QTI Core Control" to control core again.
+	  Lightweight utility for dynamic limiting min/max cpu 'QTI Core Control'
+	  Based on FB Notifier. Purposed to limiting min/max cpu for each cluster
+	  while device on suspend state. when resume triggered by screen on,
+	  restoring again min/max cpu to user config (previous) min/max
+	  for each cpu cluster.
 
 	  If unsure, say N here.
 
