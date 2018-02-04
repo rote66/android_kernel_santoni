@@ -37,19 +37,25 @@ static struct notifier_block ctl_nb;
 /* prevent scheduling work when device on boot */
 static bool booted = false;
 
+static bool suspend = false;
+
 /* functions from core_ctl */
 extern void core_ctl_suspend_work(bool suspended);
 
 static void corectl_resume(struct work_struct *work)
 {
-	if (enabled)
+	if (enabled || suspend) {
 		core_ctl_suspend_work(false);
+		suspend = false;
+	}
 }
 
 static void corectl_suspend(struct work_struct *work)
 {
-	if (enabled)
+	if (enabled) {
 		core_ctl_suspend_work(true);
+		suspend = true;
+	}
 }
 
 static int corectl_notifier_cb(struct notifier_block *nb,
