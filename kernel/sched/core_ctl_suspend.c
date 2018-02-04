@@ -18,6 +18,11 @@
 #include <linux/init.h>
 #include <linux/notifier.h>
 #include <linux/fb.h>
+#include <linux/module.h>
+
+/* enabled by default */
+static int enabled = 1;
+module_param(enabled, uint, 0664);
 
 /* 2 seconds for enter suspend */
 #define DEF_SUSPEND_TIME 2000
@@ -37,12 +42,14 @@ extern void core_ctl_suspend_work(bool suspended);
 
 static void corectl_resume(struct work_struct *work)
 {
-	core_ctl_suspend_work(false);
+	if (enabled)
+		core_ctl_suspend_work(false);
 }
 
 static void corectl_suspend(struct work_struct *work)
 {
-	core_ctl_suspend_work(true);
+	if (enabled)
+		core_ctl_suspend_work(true);
 }
 
 static int corectl_notifier_cb(struct notifier_block *nb,
@@ -82,5 +89,10 @@ static int __init core_ctl_suspend_init(void)
 
 	return 0;
 }
+
+MODULE_AUTHOR("Ryan Andri <ryanandri@linuxmail.org");
+MODULE_DESCRIPTION("'core_ctl_suspend' - Lightweight utility for dynamic limit min/max cpu "
+		"'sched core control' Based on FB Notifier");
+MODULE_LICENSE("GPL");
 
 late_initcall(core_ctl_suspend_init);
