@@ -395,8 +395,11 @@
 					<70 54 7 0>;
 		qcom,cpr-fuse-quot-offset-scale = <5 5 5>;
 		qcom,cpr-init-voltage-step = <10000>;
-		qcom,cpr-corner-map = <1 2 3 3 3 3 3>;
+		qcom,cpr-corner-map = <1 1 1 1 2 3 3 3 3 3>;
 		qcom,cpr-corner-frequency-map =
+				<1 345600000>,
+				<1 499200000>,
+				<1 729600000>,
 				<1 960000000>,
 				<2 1094400000>,
 				<3 1209600000>,
