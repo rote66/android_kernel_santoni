@@ -1208,19 +1208,6 @@ config SCHED_CORE_CTL
 
 	  If unsure, say N here.
 
-config CORE_CTL_SUSPEND
-	bool "Limit min/max cpu 'QTI Core Control' on suspend"
-	depends on SCHED_CORE_CTL
-	default n
-	help
-	  Lightweight utility for dynamic limiting min/max cpu 'QTI Core Control'
-	  Based on FB Notifier. Purposed to limiting min/max cpu for each cluster
-	  while device on suspend state. when resume triggered by screen on,
-	  restoring again min/max cpu to user config (previous) min/max
-	  for each cpu cluster.
-
-	  If unsure, say N here.
-
 config SCHED_QHMP
 	bool "QHMP scheduler extensions"
 	depends on SCHED_HMP

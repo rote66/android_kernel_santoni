@@ -41,10 +41,6 @@ struct cpu_data {
 	/* Per cluster data set only on first CPU */
 	unsigned int min_cpus;
 	unsigned int max_cpus;
-#ifdef CONFIG_CORE_CTL_SUSPEND
-	unsigned int prev_min_cpus;
-	unsigned int prev_max_cpus;
-#endif
 	unsigned int offline_delay_ms;
 	unsigned int busy_up_thres[MAX_CPUS_PER_GROUP];
 	unsigned int busy_down_thres[MAX_CPUS_PER_GROUP];
@@ -985,47 +981,6 @@ static int __ref cpu_callback(struct notifier_block *nfb,
 static struct notifier_block __refdata cpu_notifier = {
 	.notifier_call = cpu_callback,
 };
-
-/* extern for core_ctl_suspend */
-#ifdef CONFIG_CORE_CTL_SUSPEND
-void core_ctl_suspend_work(bool suspended)
-{
-	struct cpu_data *state;
-	unsigned int cpu;
-
-	for_each_possible_cpu(cpu) {
-		state = &per_cpu(cpu_state, cpu);
-
-		/* if not first cpu ie. 0 & 4. skip it */
-		if (state->cpu != state->first_cpu)
-			continue;
-
-		if (state->disabled) {
-			pr_info("%s: core control disabled by user, skip now\n",
-				__func__);
-			continue;
-		}
-
-		if (suspended) {
-			/* record min/max to prev for restoring later */
-			state->prev_min_cpus = state->min_cpus;
-			state->prev_max_cpus = state->max_cpus;
-
-			/* limit min/max cpu */
-			state->min_cpus = 1;
-			state->max_cpus = 2;
-			wake_up_hotplug_thread(state);
-		} else {
-			/* restore to user or previous min/max cpu */
-			state->min_cpus = state->prev_min_cpus;
-			state->max_cpus = state->prev_max_cpus;
-			wake_up_hotplug_thread(state);
-		}
-	}
-}
-EXPORT_SYMBOL(core_ctl_suspend_work);
-#endif
-/* extern for core_ctl_suspend */
 
 /* ============================ init code ============================== */
 
