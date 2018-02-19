@@ -22,16 +22,13 @@ fi;
 if [ -f /tmp/clarity/boot.img-osversion ]; then
 	osver=`cat /tmp/clarity/boot.img-osversion`;
 else
-	# Get Android version.
-	OSVERSION=`cat /system/build.prop | grep ro.build.version.release=`;
-	# Get 5 chars of the last string (ie 7.1.2).
-	osver=${OSVERSION:${#OSVERSION}-5:${#OSVERSION}};
+	osver=8.1.0;
 fi;
 
 if [ -f /tmp/clarity/boot.img-oslevel ]; then
 	osvel=`cat /tmp/clarity/boot.img-oslevel`;
 else
-	osvel=2018-01;
+	osvel=2018-02;
 fi;
 
 /tmp/clarity/mkbootimg --kernel /tmp/clarity/zImage --ramdisk /tmp/clarity/boot.img-ramdisk.gz --cmdline "$cmdline" --board "$board" --base $base --pagesize $pagesize --kernel_offset $kerneloff --ramdisk_offset $ramdiskoff --second_offset $secondoff --tags_offset "$tagsoff" --os_version "$osver" --os_patch_level "$osvel" --hash "$hashfck" --output /tmp/clarity/newboot.img;
