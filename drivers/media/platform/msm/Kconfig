@@ -1,5 +1,4 @@
 source "drivers/media/platform/msm/vidc/Kconfig"
-source "drivers/media/platform/msm/vidc_n/Kconfig"
 
 #
 # MSM camera configuration
