@@ -2924,12 +2924,12 @@ static inline int lim_select_cbmode(tDphHashNode *sta_ds, uint8_t channel,
              channel == 64 || channel == 104 || channel == 112 ||
              channel == 120 || channel == 128 || channel == 136 ||
              channel == 144 || channel == 153 || channel == 161)
-           return PHY_DOUBLE_CHANNEL_LOW_PRIMARY;
+           return PHY_DOUBLE_CHANNEL_HIGH_PRIMARY;
         else if (channel== 36 || channel == 44 || channel == 52 ||
              channel == 60 || channel == 100 || channel == 108 ||
              channel == 116 || channel == 124 || channel == 132 ||
              channel == 140 || channel == 149 || channel == 157)
-           return PHY_DOUBLE_CHANNEL_HIGH_PRIMARY;
+           return PHY_DOUBLE_CHANNEL_LOW_PRIMARY;
         else if (channel == 165)
            return PHY_SINGLE_CHANNEL_CENTERED;
     }
@@ -4841,13 +4841,13 @@ limEnableHT20Protection(tpAniSirGlobal pMac, tANI_U8 enable,
     if(!psessionEntry->htCapability)
         return eSIR_SUCCESS; // this protection  is only for HT stations.
 
-    //overlapping protection configuration check.
-    if(overlap)
-    {
-    }
-    else
-    {
-    //normal protection config check
+        //overlapping protection configuration check.
+        if(overlap)
+        {
+        }
+        else
+        {
+            //normal protection config check
             if((psessionEntry->limSystemRole == eLIM_AP_ROLE ) &&
                 !psessionEntry->cfgProtection.ht20)
             {
@@ -4863,7 +4863,7 @@ limEnableHT20Protection(tpAniSirGlobal pMac, tANI_U8 enable,
                     return eSIR_SUCCESS;
                 }
             }
-    }
+        }
 
     if (enable)
     {
@@ -5051,12 +5051,12 @@ limEnableHTNonGfProtection(tpAniSirGlobal pMac, tANI_U8 enable,
     if(!psessionEntry->htCapability)
         return eSIR_SUCCESS; // this protection  is only for HT stations.
 
-    //overlapping protection configuration check.
-    if(overlap)
-    {
-    }
-    else
-    {
+        //overlapping protection configuration check.
+        if(overlap)
+        {
+        }
+        else
+        {
             //normal protection config check
             if((psessionEntry->limSystemRole == eLIM_AP_ROLE ) &&
                 !psessionEntry->cfgProtection.nonGf)
@@ -5074,7 +5074,7 @@ limEnableHTNonGfProtection(tpAniSirGlobal pMac, tANI_U8 enable,
                     return eSIR_SUCCESS;
                  }
             }
-    }
+        }
     if(psessionEntry->limSystemRole == eLIM_AP_ROLE){
         if ((enable) && (false == psessionEntry->beaconParams.llnNonGFCoexist))
         {
@@ -5122,12 +5122,12 @@ limEnableHTLsigTxopProtection(tpAniSirGlobal pMac, tANI_U8 enable,
     if(!psessionEntry->htCapability)
         return eSIR_SUCCESS; // this protection  is only for HT stations.
 
-    //overlapping protection configuration check.
-    if(overlap)
-    {
-    }
-    else
-    {
+        //overlapping protection configuration check.
+        if(overlap)
+        {
+        }
+        else
+        {
             //normal protection config check
             if((psessionEntry->limSystemRole == eLIM_AP_ROLE ) &&
                !psessionEntry->cfgProtection.lsigTxop)
@@ -5145,7 +5145,7 @@ limEnableHTLsigTxopProtection(tpAniSirGlobal pMac, tANI_U8 enable,
                     return eSIR_SUCCESS;
                 }
             }
-    }
+        }
 
 
     if(psessionEntry->limSystemRole == eLIM_AP_ROLE){
@@ -5196,12 +5196,12 @@ limEnableHtRifsProtection(tpAniSirGlobal pMac, tANI_U8 enable,
         return eSIR_SUCCESS; // this protection  is only for HT stations.
 
 
-    //overlapping protection configuration check.
-    if(overlap)
-    {
-    }
-    else
-    {
+        //overlapping protection configuration check.
+        if(overlap)
+        {
+        }
+        else
+        {
              //normal protection config check
             if((psessionEntry->limSystemRole == eLIM_AP_ROLE) &&
                !psessionEntry->cfgProtection.rifs)
@@ -5219,7 +5219,7 @@ limEnableHtRifsProtection(tpAniSirGlobal pMac, tANI_U8 enable,
                   return eSIR_SUCCESS;
                }
             }
-    }
+        }
 
     if(psessionEntry->limSystemRole == eLIM_AP_ROLE){
         // Disabling the RIFS Protection means Enable the RIFS mode of operation in the BSS
@@ -9433,4 +9433,20 @@ int peFindBssIdxFromSmeSessionId(tpAniSirGlobal pMac, tANI_U8 sme_sessionId)
 
     limLog(pMac, LOG4, FL("Session lookup fails for sme_sessionId: "));
     return(0xFF);
+}
+void limStaDelBASession(tpAniSirGlobal pMac)
+{
+    tANI_U32 i;
+    tpPESession pSessionEntry;
+
+    for (i = 0; i < pMac->lim.maxBssId; i++)
+    {
+        pSessionEntry = peFindSessionBySessionId(pMac, i);
+        if (pSessionEntry &&
+            pSessionEntry->limSystemRole == eLIM_STA_ROLE)
+        {
+            limDeleteBASessions(pMac, pSessionEntry, BA_BOTH_DIRECTIONS,
+                                eSIR_MAC_UNSPEC_FAILURE_REASON);
+        }
+    }
 }

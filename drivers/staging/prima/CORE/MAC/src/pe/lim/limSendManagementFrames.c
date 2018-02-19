@@ -5402,6 +5402,8 @@ lim_send_extended_chan_switch_action_frame(tpAniSirGlobal mac_ctx,
        (session_entry->pePersona == VOS_P2P_GO_MODE)) {
          txFlag |= HAL_USE_BD_RATE2_FOR_MANAGEMENT_FRAME;
    }
+   /* Use peer sta to transmit this frame */
+   txFlag |= HAL_USE_PEER_STA_REQUESTED_MASK;
 
    limLog(mac_ctx, LOG1, FL("Send Ext channel Switch to :"MAC_ADDRESS_STR" with swcount %d, swmode %d , newchannel %d newops %d"),
           MAC_ADDR_ARRAY(mac_hdr->da),
@@ -6127,15 +6129,15 @@ tSirRetStatus limSendAddBARsp( tpAniSirGlobal pMac,
   else
     return eSIR_SUCCESS;
 
-  returnAfterError:
-    // Release buffer, if allocated
-    if( NULL != pAddBARspBuffer )
-       palPktFree( pMac->hHdd,
+    returnAfterError:
+      // Release buffer, if allocated
+      if( NULL != pAddBARspBuffer )
+        palPktFree( pMac->hHdd,
             HAL_TXRX_FRM_802_11_MGMT,
             (void *) pAddBARspBuffer,
             (void *) pPacket );
 
-    return statusCode;
+      return statusCode;
 }
 
 /**
@@ -6331,16 +6333,16 @@ tSirRetStatus limSendDelBAInd( tpAniSirGlobal pMac,
   else
     return eSIR_SUCCESS;
 
-  returnAfterError:
+    returnAfterError:
 
-  // Release buffer, if allocated
-  if( NULL != pDelBAIndBuffer )
-     palPktFree( pMac->hHdd,
+      // Release buffer, if allocated
+      if( NULL != pDelBAIndBuffer )
+        palPktFree( pMac->hHdd,
             HAL_TXRX_FRM_802_11_MGMT,
             (void *) pDelBAIndBuffer,
             (void *) pPacket );
 
-  return statusCode;
+      return statusCode;
 }
 
 #if defined WLAN_FEATURE_VOWIFI
