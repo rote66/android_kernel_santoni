@@ -281,6 +281,7 @@ struct ft5x06_ts_data {
 	u8 fw_ver[3];
 	u8 fw_vendor_id;
 #if defined(CONFIG_FB)
+	struct workqueue_struct *ft5x06_ts_wq;
 	struct notifier_block fb_notif;
 	struct work_struct fb_notify_work;
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
