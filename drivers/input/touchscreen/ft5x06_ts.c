@@ -285,6 +285,7 @@ struct ft5x06_ts_data {
 	u8 fw_vendor_id;
 	struct kobject *ts_info_kobj;
 #if defined(CONFIG_FB)
+	struct workqueue_struct *ft5x06_ts_wq;
 	struct work_struct fb_notify_work;
 	struct notifier_block fb_notif;
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
@@ -1531,10 +1532,11 @@ static int fb_notifier_callback(struct notifier_block *self,
 		if (ft5x06_data->pdata->resume_in_workqueue) {
 			if (event == FB_EARLY_EVENT_BLANK &&
 						 *blank == FB_BLANK_UNBLANK)
-				schedule_work(&ft5x06_data->fb_notify_work);
+				queue_work(ft5x06_data->ft5x06_ts_wq,
+						&ft5x06_data->fb_notify_work);
 			else if (event == FB_EVENT_BLANK &&
 						 *blank == FB_BLANK_POWERDOWN) {
-				flush_work(&ft5x06_data->fb_notify_work);
+				cancel_work_sync(&ft5x06_data->fb_notify_work);
 				ft5x06_ts_suspend(&ft5x06_data->client->dev);
 			}
 		} else {
@@ -2716,6 +2718,12 @@ static int ft5x06_ts_probe(struct i2c_client *client,
 	tp_color = lockdown_info[2];
 #endif
 #if defined(CONFIG_FB)
+	data->ft5x06_ts_wq = alloc_workqueue("ft5x06_ts_wq", WQ_HIGHPRI | WQ_UNBOUND, 0);
+	if (!data->ft5x06_ts_wq) {
+		pr_info("%s: Failed to allocate ft5x06_ts workqueue\n", __func__);
+		return -ENOMEM;
+	}
+
 	INIT_WORK(&data->fb_notify_work, fb_notify_resume_work);
 	data->fb_notif.notifier_call = fb_notifier_callback;
 
@@ -2816,6 +2824,7 @@ static int ft5x06_ts_remove(struct i2c_client *client)
 	device_remove_file(&client->dev, &dev_attr_fw_name);
 
 #if defined(CONFIG_FB)
+	destroy_workqueue(data->ft5x06_ts_wq);
 	if (fb_unregister_client(&data->fb_notif))
 		dev_err(&client->dev, "Error occurred while unregistering fb_notifier.\n");
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
