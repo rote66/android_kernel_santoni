@@ -814,7 +814,7 @@ static int fb_notifier_callback(struct notifier_block *self,
 			queue_work(ft5x06_data->ft5x06_ts_wq,
 					&ft5x06_data->fb_notify_work);
 		} else if (*blank == FB_BLANK_POWERDOWN) {
-			cancel_work_sync(&ft5x06_data->fb_notify_work);
+			flush_work(&ft5x06_data->fb_notify_work);
 			ft5x06_ts_suspend(&ft5x06_data->client->dev);
 		}
 	}
