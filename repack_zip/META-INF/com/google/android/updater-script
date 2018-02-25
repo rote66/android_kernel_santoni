@@ -2,7 +2,7 @@ assert(getprop("ro.product.device") == "santoni" || getprop("ro.build.product") 
 ui_print("-----------------------------------");
 ui_print("-         Clarity Kernel          -");
 ui_print("-----------------------------------");
-ui_print("-              OREO               -");
+ui_print("-             NOUGAT              -");
 ui_print("-----------------------------------");
 ui_print("-    Redmi 4X | HM4X | Santoni    -");
 ui_print("-----------------------------------");

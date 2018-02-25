@@ -14,7 +14,7 @@ mv arch/arm64/boot/Image.gz-dtb repack_zip/clarity/zImage
 cd repack_zip
 
 if [ ! $VER ] && [ ! $SUB ]; then
-	zip -r ../../release_testing/Clarity-Testing-OREO_HM4X.zip *
+	zip -r ../../release_testing/Clarity-Testing-NOUGAT_HM4X.zip *
 else
-	zip -r ../../release_santoni/Clarity-v$VER.$SUB-OREO_HM4X.zip *
+	zip -r ../../release_santoni/Clarity-v$VER.$SUB-NOUGAT_HM4X.zip *
 fi

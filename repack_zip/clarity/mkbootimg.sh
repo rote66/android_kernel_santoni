@@ -22,7 +22,7 @@ fi;
 if [ -f /tmp/clarity/boot.img-osversion ]; then
 	osver=`cat /tmp/clarity/boot.img-osversion`;
 else
-	osver=8.1.0;
+	osver=7.1.2;
 fi;
 
 if [ -f /tmp/clarity/boot.img-oslevel ]; then
