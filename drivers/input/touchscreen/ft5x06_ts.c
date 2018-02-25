@@ -67,7 +67,7 @@ static irqreturn_t ft5x06_ts_interrupt(int irq, void *data);
 //Required to get tp_color
 #define FT_LOCKDOWN_SIZE        8
 static u8 lockdown_info[FT_LOCKDOWN_SIZE];
-extern u8 tp_color;
+u8 tp_color;
 #endif
 
 #define FT_DRIVER_VERSION	0x02

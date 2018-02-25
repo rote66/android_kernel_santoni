@@ -105,7 +105,7 @@ bool blink_frequency_adjust;
 #define MAX_BRIGHTNESS_RED 255
 #define MAX_BRIGHTNESS_GREEN 255
 #define MAX_BRIGHTNESS_BLUE 255
-u8 tp_color;
+extern u8 tp_color;
 
 typedef unsigned char U8;
 static int aw2013_debug_enable;
