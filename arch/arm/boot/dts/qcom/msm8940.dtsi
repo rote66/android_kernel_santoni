@@ -349,6 +349,10 @@
 		reg-names = "sec-boot-base";
 	};
 
+	qcom,bcl {
+		/delete-property/qcom,bcl-hotplug-list;
+		/delete-property/qcom,bcl-soc-hotplug-list;
+	};
 };
 
 /* GPU overrides */
