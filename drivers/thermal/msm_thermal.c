@@ -2887,6 +2887,10 @@ static void __ref do_core_control(long temp)
 	if (msm_thermal_info.core_control_mask &&
 		temp >= msm_thermal_info.core_limit_temp_degC) {
 		for (i = num_possible_cpus(); i > 0; i--) {
+			/* Don't offline CPU 0. */
+			if (!i)
+				continue;
+
 			if (!(msm_thermal_info.core_control_mask & BIT(i)))
 				continue;
 			if (cpus_offlined & BIT(i) && !cpu_online(i))
@@ -2962,6 +2966,10 @@ static int __ref update_offline_cores(int val)
 	cpus_offlined = msm_thermal_info.core_control_mask & val;
 
 	for_each_possible_cpu(cpu) {
+		/* Don't offline CPU 0. */
+		if (!cpu)
+			continue;
+
 		if (cpus_offlined & BIT(cpu)) {
 			lock_device_hotplug();
 			if (!cpu_online(cpu)) {
