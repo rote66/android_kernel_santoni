@@ -44,7 +44,6 @@
 #include <soc/qcom/scm.h>
 #include <linux/platform_device.h>
 #include <linux/wakelock.h>
-#include <linux/hardware_info.h>
 
 #define FPC1020_RESET_LOW_US 1000
 #define FPC1020_RESET_HIGH1_US 100
@@ -85,7 +84,7 @@ struct fpc1020_data {
 	bool clocks_suspended;
 #endif
 };
-char boardid_info_fingerprint[HARDWARE_MAX_ITEM_LONGTH] = {0,};
+
 static irqreturn_t fpc1020_irq_handler(int irq, void *handle);
 static int fpc1020_request_named_gpio(struct fpc1020_data *fpc1020,
 		const char *label, int *gpio);
@@ -468,18 +467,6 @@ static int fpc1020_request_named_gpio(struct fpc1020_data *fpc1020,
 	return 0;
 }
 
-void parse_cmldine_for_fingerprint(struct device *dev)
-{
-	char *boadrid_start;
-	boadrid_start = strstr(saved_command_line, "board_id=");
-	if (boadrid_start != NULL)  {
-		strncpy(boardid_info_fingerprint, boadrid_start+sizeof("board_id=")-1, 12);
-		dev_info(dev, "%s: is ok %s \n", __func__, boardid_info_fingerprint);
-	} else {
-		pr_debug("boarid not define!\n");
-	}
-}
-
 static int fpc1020_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -494,13 +481,6 @@ static int fpc1020_probe(struct platform_device *pdev)
 				"failed to allocate memory for struct fpc1020_data\n");
 		rc = -ENOMEM;
 		goto exit;
-	}
-
-	parse_cmldine_for_fingerprint(dev);
-	if (strcmp(boardid_info_fingerprint, "S88537DC1:bo") == 0)  {
-		devm_kfree(dev, fpc1020);
-		dev_info(dev, "%s: exit fpc probe\n", __func__);
-		return -EPERM;
 	}
 
 	fpc1020->dev = dev;
