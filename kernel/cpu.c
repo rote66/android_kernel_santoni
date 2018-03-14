@@ -415,10 +415,6 @@ int __ref cpu_down(unsigned int cpu)
 {
 	int err;
 
-	/* Don't unplug cpu 0 */
-	if (!cpu)
-		return -EINVAL;
-
 	cpu_maps_update_begin();
 
 	if (cpu_hotplug_disabled) {
