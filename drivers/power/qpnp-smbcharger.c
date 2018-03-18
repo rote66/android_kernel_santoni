@@ -1838,7 +1838,14 @@ static int smbchg_set_usb_current_max(struct smbchg_chip *chip,
 				pr_err("Couldn't set CMD_IL rc = %d\n", rc);
 				goto out;
 			}
+#ifdef CONFIG_FORCE_FAST_CHARGE
+			if (force_fast_charge > 0)
+				chip->usb_max_current_ma = 1200;
+			else
+				chip->usb_max_current_ma = 900;
+#else
 			chip->usb_max_current_ma = 900;
+#endif
 		}
 		break;
 	case POWER_SUPPLY_TYPE_USB_CDP:
