@@ -21,8 +21,6 @@
 #define MEMSW_FREESWAP_KB  (get_nr_swap_pages() << (PAGE_SHIFT - 10))
 #define MEMSW_EXTRA_KB     (16 << (PAGE_SHIFT - 10))
 
-static uint32_t check_pending_times;
-
 static int memsw_dev_open(struct inode *inode, struct file *file)
 {
 	struct memsw_dev *memsw_dev;
@@ -252,7 +250,6 @@ static void kmemsw_chkd_try_to_sleep(void)
 static int kmemsw_chkd(void *data)
 {
 	while (!kthread_should_stop()) {
-		check_pending_times++;
 		memsw_dev_check_pending();
 		kmemsw_chkd_try_to_sleep();
 	}
@@ -306,8 +303,6 @@ static void __init kmemswchkd_exit(void)
 		kmemswchkd_ktp = NULL;
 	}
 }
-
-module_param_named(check_times, check_pending_times, uint, S_IRUGO | S_IWUSR);
 
 module_init(kmemswchkd_init);
 module_exit(kmemswchkd_exit);
