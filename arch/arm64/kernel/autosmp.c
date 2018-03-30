@@ -21,7 +21,6 @@
  */
 
 #include <linux/moduleparam.h>
-#include <linux/earlysuspend.h>
 #include <linux/cpufreq.h>
 #include <linux/workqueue.h>
 #include <linux/cpu.h>
@@ -43,7 +42,6 @@ static DEFINE_PER_CPU(struct asmp_cpudata_t, asmp_cpudata);
 
 static struct asmp_param_struct {
 	unsigned int delay;
-	bool scroff_single_core;
 	unsigned int max_cpus;
 	unsigned int min_cpus;
 	unsigned int cpufreq_up;
@@ -52,7 +50,6 @@ static struct asmp_param_struct {
 	unsigned int cycle_down;
 } asmp_param = {
 	.delay = 100,
-	.scroff_single_core = true,
 	.max_cpus = CONFIG_NR_CPUS,
 	.min_cpus = 1,
 	.cpufreq_up = 90,
@@ -129,47 +126,6 @@ static void __cpuinit asmp_work_fn(struct work_struct *work) {
 	queue_delayed_work(asmp_workq, &asmp_work, delay_jif);
 }
 
-static void asmp_early_suspend(struct early_suspend *h) {
-	unsigned int cpu;
-
-	/* unplug online cpu cores */
-	if (asmp_param.scroff_single_core)
-		for_each_present_cpu(cpu)
-			if (cpu && cpu_online(cpu))
-				cpu_down(cpu);
-
-	/* suspend main work thread */
-	if (enabled)
-		cancel_delayed_work_sync(&asmp_work);
-
-	pr_info(ASMP_TAG"suspended\n");
-}
-
-static void __cpuinit asmp_late_resume(struct early_suspend *h) {
-	unsigned int cpu;
-
-	/* hotplug offline cpu cores */
-	if (asmp_param.scroff_single_core)
-		for_each_present_cpu(cpu) {
-			if (num_online_cpus() >= asmp_param.max_cpus)
-				break;
-			if (!cpu_online(cpu))
-				cpu_up(cpu);
-		}
-	/* resume main work thread */
-	if (enabled)
-		queue_delayed_work(asmp_workq, &asmp_work,
-				msecs_to_jiffies(asmp_param.delay));
-
-	pr_info(ASMP_TAG"resumed\n");
-}
-
-static struct early_suspend __refdata asmp_early_suspend_handler = {
-	.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN,
-	.suspend = asmp_early_suspend,
-	.resume = asmp_late_resume,
-};
-
 static int __cpuinit set_enabled(const char *val, const struct kernel_param *kp) {
 	int ret;
 	unsigned int cpu;
@@ -218,7 +174,6 @@ static ssize_t show_##file_name						\
 	return sprintf(buf, "%u\n", asmp_param.object);			\
 }
 show_one(delay, delay);
-show_one(scroff_single_core, scroff_single_core);
 show_one(min_cpus, min_cpus);
 show_one(max_cpus, max_cpus);
 show_one(cpufreq_up,cpufreq_up);
@@ -240,7 +195,6 @@ static ssize_t store_##file_name					\
 }									\
 define_one_global_rw(file_name);
 store_one(delay, delay);
-store_one(scroff_single_core, scroff_single_core);
 store_one(min_cpus, min_cpus);
 store_one(max_cpus, max_cpus);
 store_one(cpufreq_up, cpufreq_up);
@@ -250,7 +204,6 @@ store_one(cycle_down, cycle_down);
 
 static struct attribute *asmp_attributes[] = {
 	&delay.attr,
-	&scroff_single_core.attr,
 	&min_cpus.attr,
 	&max_cpus.attr,
 	&cpufreq_up.attr,
@@ -305,8 +258,6 @@ static int __init asmp_init(void) {
 	if (enabled)
 		queue_delayed_work(asmp_workq, &asmp_work,
 				   msecs_to_jiffies(ASMP_STARTDELAY));
-
-	register_early_suspend(&asmp_early_suspend_handler);
 
 	asmp_kobject = kobject_create_and_add("autosmp", kernel_kobj);
 	if (asmp_kobject) {
