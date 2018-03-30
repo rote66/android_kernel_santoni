@@ -12,6 +12,9 @@
  * optimize more, generalize for n cores, Sep. 2013, http://goo.gl/448qBz
  * generalize for all arch, rename as autosmp, Dec. 2013, http://goo.gl/x5oyhy
  *
+ * Copyright (C) 2018, Ryan Andri (Rainforce279) <ryanandri@linuxmail.org>
+ * 		 Adaptation for Octa core processor.
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -29,6 +32,7 @@
 
 #define ASMP_TAG "AutoSMP: "
 #define ASMP_STARTDELAY 20000
+#define MAX_CPU_GROUP 4
 
 static struct delayed_work asmp_work;
 static struct workqueue_struct *asmp_workq;
@@ -43,8 +47,8 @@ static struct asmp_param_struct {
 	unsigned int cycle_down;
 } asmp_param = {
 	.delay = 100,
-	.max_cpus = CONFIG_NR_CPUS,
-	.min_cpus = 1,
+	.max_cpus = MAX_CPU_GROUP,
+	.min_cpus = 2,
 	.cpufreq_up = 90,
 	.cpufreq_down = 60,
 	.cycle_up = 1,
@@ -55,11 +59,21 @@ static unsigned int cycle = 0, delay0 = 0;
 static unsigned long delay_jif = 0;
 static int enabled __read_mostly = 1;
 
-static void __cpuinit asmp_work_fn(struct work_struct *work) {
-	unsigned int cpu = 0, slow_cpu = 0;
-	unsigned int rate, cpu0_rate, slow_rate = UINT_MAX, fast_rate;
-	unsigned int max_rate, up_rate, down_rate;
-	int nr_cpu_online;
+static void __ref asmp_work_fn(struct work_struct *work) {
+	unsigned int cpu, rate;
+	unsigned int slow_cpu_bc = 0, slow_cpu_lc = 4;
+	unsigned int cpu_rate_bc, fast_rate_bc;
+	unsigned int cpu_rate_lc, fast_rate_lc;
+	unsigned int slow_rate_lc = UINT_MAX, slow_rate_bc = UINT_MAX;
+	unsigned int max_rate_lc, max_rate_bc;
+	unsigned int up_rate_lc, down_rate_lc;
+	unsigned int up_rate_bc, down_rate_bc;
+	int nr_cpu_online_lc = 0, nr_cpu_online_bc = 0;
+
+	if (!cpu_online(0))
+		cpu_up(0);
+	if (!cpu_online(4))
+		cpu_up(4);
 
 	cycle++;
 
@@ -68,43 +82,85 @@ static void __cpuinit asmp_work_fn(struct work_struct *work) {
 		delay_jif = msecs_to_jiffies(delay0);
 	}
 
-	/* get maximum possible freq for cpu0 and
-	   calculate up/down limits */
-	max_rate  = cpufreq_quick_get_max(cpu);
-	up_rate   = asmp_param.cpufreq_up*max_rate/100;
-	down_rate = asmp_param.cpufreq_down*max_rate/100;
+	/* Big Cluster */
+	max_rate_bc  = cpufreq_quick_get_max(0);
+	up_rate_bc   = (asmp_param.cpufreq_up * max_rate_bc) / 100;
+	down_rate_bc = (asmp_param.cpufreq_down * max_rate_bc) / 100;
+
+	/* Little Cluster */
+	max_rate_lc  = cpufreq_quick_get_max(4);
+	up_rate_lc   = (asmp_param.cpufreq_up * max_rate_lc) / 100;
+	down_rate_lc = (asmp_param.cpufreq_down * max_rate_lc) / 100;
 
 	/* find current max and min cpu freq to estimate load */
 	get_online_cpus();
-	nr_cpu_online = num_online_cpus();
-	cpu0_rate = cpufreq_quick_get(cpu);
-	fast_rate = cpu0_rate;
-	for_each_online_cpu(cpu)
-		if (cpu) {
+	cpu_rate_bc = cpufreq_quick_get(0);
+	fast_rate_bc = cpu_rate_bc;
+	cpu_rate_lc = cpufreq_quick_get(4);
+	fast_rate_lc = cpu_rate_lc;
+	for_each_online_cpu(cpu) {
+		if (cpu && cpu < 4) {
+			nr_cpu_online_bc++;
 			rate = cpufreq_quick_get(cpu);
-			if (rate <= slow_rate) {
-				slow_cpu = cpu;
-				slow_rate = rate;
-			} else if (rate > fast_rate)
-				fast_rate = rate;
+			if (rate <= slow_rate_bc) {
+				slow_cpu_bc = cpu;
+				slow_rate_bc = rate;
+			} else if (rate > fast_rate_bc)
+				fast_rate_bc = rate;
 		}
+
+		if (cpu > 4) {
+			nr_cpu_online_lc++;
+			rate = cpufreq_quick_get(cpu);
+			if (rate <= slow_rate_lc) {
+				slow_cpu_lc = cpu;
+				slow_rate_lc = rate;
+			} else if (rate > fast_rate_lc)
+				fast_rate_lc = rate;
+		}
+	}
 	put_online_cpus();
-	if (cpu0_rate < slow_rate)
-		slow_rate = cpu0_rate;
+
+	if (cpu_rate_lc < slow_rate_lc)
+		slow_rate_lc = cpu_rate_lc;
+
+	nr_cpu_online_lc += 1;
 
 	/* hotplug one core if all online cores are over up_rate limit */
-	if (slow_rate > up_rate) {
-		if ((nr_cpu_online < asmp_param.max_cpus) &&
+	if (slow_rate_lc > up_rate_lc) {
+		if ((nr_cpu_online_lc < asmp_param.max_cpus) &&
+		    (cycle >= asmp_param.cycle_up)) {
+			cpu = cpumask_next_zero(4, cpu_online_mask);
+			cpu_up(cpu);
+			cycle = 0;
+		}
+	/* unplug slowest core if all online cores are under down_rate limit */
+	} else if ((slow_cpu_lc > 4) && (fast_rate_lc < down_rate_lc)) {
+		if ((nr_cpu_online_lc > asmp_param.min_cpus) &&
+		    (cycle >= asmp_param.cycle_down)) {
+ 			cpu_down(slow_cpu_lc);
+			cycle = 0;
+		}
+	} /* else do nothing */
+
+	if (cpu_rate_bc < slow_rate_bc)
+		slow_rate_bc = cpu_rate_bc;
+
+	nr_cpu_online_bc += 1;
+
+	/* hotplug one core if all online cores are over up_rate limit */
+	if (slow_rate_bc > up_rate_bc) {
+		if ((nr_cpu_online_bc < asmp_param.max_cpus) &&
 		    (cycle >= asmp_param.cycle_up)) {
 			cpu = cpumask_next_zero(0, cpu_online_mask);
 			cpu_up(cpu);
 			cycle = 0;
 		}
 	/* unplug slowest core if all online cores are under down_rate limit */
-	} else if (slow_cpu && (fast_rate < down_rate)) {
-		if ((nr_cpu_online > asmp_param.min_cpus) &&
+	} else if (slow_cpu_bc && (fast_rate_bc < down_rate_bc)) {
+		if ((nr_cpu_online_bc > asmp_param.min_cpus) &&
 		    (cycle >= asmp_param.cycle_down)) {
- 			cpu_down(slow_cpu);
+ 			cpu_down(slow_cpu_bc);
 			cycle = 0;
 		}
 	} /* else do nothing */
@@ -112,20 +168,22 @@ static void __cpuinit asmp_work_fn(struct work_struct *work) {
 	queue_delayed_work(asmp_workq, &asmp_work, delay_jif);
 }
 
-static int __cpuinit set_enabled(const char *val, const struct kernel_param *kp) {
+static int __ref set_enabled(const char *val, const struct kernel_param *kp) {
 	int ret;
 	unsigned int cpu;
 
 	ret = param_set_bool(val, kp);
 	if (enabled) {
+		for_each_possible_cpu(cpu) {
+			if (!cpu_online(cpu))
+				cpu_up(cpu);
+		}
 		queue_delayed_work(asmp_workq, &asmp_work,
 				msecs_to_jiffies(asmp_param.delay));
 		pr_info(ASMP_TAG"enabled\n");
 	} else {
 		cancel_delayed_work_sync(&asmp_work);
-		for_each_present_cpu(cpu) {
-			if (num_online_cpus() >= nr_cpu_ids)
-				break;
+		for_each_possible_cpu(cpu) {
 			if (!cpu_online(cpu))
 				cpu_up(cpu);
 		}
