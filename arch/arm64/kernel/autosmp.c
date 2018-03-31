@@ -29,12 +29,15 @@
 #include <linux/cpu.h>
 #include <linux/cpumask.h>
 #include <linux/hrtimer.h>
+#include <linux/notifier.h>
+#include <linux/fb.h>
 
 #define ASMP_TAG "AutoSMP: "
 #define ASMP_STARTDELAY 20000
 
 static struct delayed_work asmp_work;
 static struct workqueue_struct *asmp_workq;
+static struct notifier_block asmp_nb;
 
 /*
  * Flag and NOT editable/tunabled
@@ -172,6 +175,53 @@ static void __ref asmp_work_fn(struct work_struct *work) {
 	queue_delayed_work(asmp_workq, &asmp_work, delay_jif);
 }
 
+static void asmp_suspend(void)
+{
+	unsigned int cpu;
+
+	/* stop plug/unplug when suspend */
+	cancel_delayed_work_sync(&asmp_work);
+
+	/* leave only cpu 0 and cpu 4 to stay online */
+	for_each_online_cpu(cpu) {
+		if (cpu && cpu != 4)
+			cpu_down(cpu);
+	}
+}
+
+static void __ref asmp_resume(void)
+{
+	unsigned int cpu;
+
+	/* Force all cpu's to online when resumed */
+	for_each_possible_cpu(cpu) {
+		if (!cpu_online(cpu))
+			cpu_up(cpu);
+	}
+
+	/* rescheduled queue atleast on 3 seconds */
+	queue_delayed_work(asmp_workq, &asmp_work,
+				msecs_to_jiffies(3000));
+}
+
+static int asmp_notifier_cb(struct notifier_block *nb,
+			    unsigned long event, void *data)
+{
+	struct fb_event *evdata = data;
+	int *blank;
+
+	if (evdata && evdata->data &&
+		event == FB_EVENT_BLANK) {
+		blank = evdata->data;
+		if (*blank == FB_BLANK_UNBLANK)
+			asmp_resume();
+		else if (*blank == FB_BLANK_POWERDOWN)
+			asmp_suspend();
+	}
+
+	return 0;
+}
+
 #ifdef CONFIG_SCHED_CORE_CTL
 extern void disable_core_control(bool disable);
 #endif
@@ -200,6 +250,10 @@ static int asmp_start(void)
 	queue_delayed_work(asmp_workq, &asmp_work,
 			msecs_to_jiffies(asmp_param.delay));
 
+	asmp_nb.notifier_call = asmp_notifier_cb;
+	if (fb_register_client(&asmp_nb))
+		pr_info("%s: failed register to fb notifier\n", __func__);
+
 	started = true;
 
 	pr_info(ASMP_TAG"enabled\n");
@@ -224,6 +278,9 @@ static void asmp_stop(void)
 
 	cancel_delayed_work_sync(&asmp_work);
 	destroy_workqueue(asmp_workq);
+
+	asmp_nb.notifier_call = 0;
+	fb_unregister_client(&asmp_nb);
 
 	for_each_possible_cpu(cpu) {
 		if (!cpu_online(cpu))
