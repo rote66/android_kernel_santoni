@@ -32,7 +32,6 @@
 
 #define ASMP_TAG "AutoSMP: "
 #define ASMP_STARTDELAY 20000
-#define MAX_CPU_GROUP 4
 
 static struct delayed_work asmp_work;
 static struct workqueue_struct *asmp_workq;
@@ -47,7 +46,7 @@ static struct asmp_param_struct {
 	unsigned int cycle_down;
 } asmp_param = {
 	.delay = 100,
-	.max_cpus = MAX_CPU_GROUP,
+	.max_cpus = 4, /* Max cpu per cluster ! */
 	.min_cpus = 2,
 	.cpufreq_up = 90,
 	.cpufreq_down = 60,
@@ -82,15 +81,15 @@ static void __ref asmp_work_fn(struct work_struct *work) {
 		delay_jif = msecs_to_jiffies(delay0);
 	}
 
-	/* Big Cluster */
-	max_rate_bc  = cpufreq_quick_get_max(0);
-	up_rate_bc   = (asmp_param.cpufreq_up * max_rate_bc) / 100;
-	down_rate_bc = (asmp_param.cpufreq_down * max_rate_bc) / 100;
-
 	/* Little Cluster */
 	max_rate_lc  = cpufreq_quick_get_max(4);
-	up_rate_lc   = (asmp_param.cpufreq_up * max_rate_lc) / 100;
-	down_rate_lc = (asmp_param.cpufreq_down * max_rate_lc) / 100;
+	up_rate_lc   = ((asmp_param.cpufreq_up - 10) * max_rate_lc) / 100;
+	down_rate_lc = ((asmp_param.cpufreq_down + 5) * max_rate_lc) / 100;
+
+	/* Big Cluster */
+	max_rate_bc  = cpufreq_quick_get_max(0);
+	up_rate_bc   = ((asmp_param.cpufreq_up + 5) * max_rate_bc) / 100;
+	down_rate_bc = ((asmp_param.cpufreq_down + 5) * max_rate_bc) / 100;
 
 	/* find current max and min cpu freq to estimate load */
 	get_online_cpus();
