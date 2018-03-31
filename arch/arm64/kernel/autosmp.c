@@ -167,33 +167,59 @@ static void __ref asmp_work_fn(struct work_struct *work) {
 	queue_delayed_work(asmp_workq, &asmp_work, delay_jif);
 }
 
+static int asmp_start(void)
+{
+	unsigned int cpu;
+
+	asmp_workq = alloc_workqueue("asmp", WQ_HIGHPRI, 0);
+	if (!asmp_workq)
+		return -ENOMEM;
+
+	for_each_possible_cpu(cpu) {
+		if (!cpu_online(cpu))
+			cpu_up(cpu);
+	}
+
+	INIT_DELAYED_WORK(&asmp_work, asmp_work_fn);
+	queue_delayed_work(asmp_workq, &asmp_work,
+			msecs_to_jiffies(asmp_param.delay));
+
+	pr_info(ASMP_TAG"enabled\n");
+
+	return 0;
+}
+
+static void asmp_stop(void)
+{
+	unsigned int cpu;
+
+	cancel_delayed_work_sync(&asmp_work);
+	destroy_workqueue(asmp_workq);
+
+	for_each_possible_cpu(cpu) {
+		if (!cpu_online(cpu))
+			cpu_up(cpu);
+	}
+
+	pr_info(ASMP_TAG"disabled\n");
+}
+
 #ifdef CONFIG_SCHED_CORE_CTL
 extern void disable_core_control(bool disable);
 #endif
-
-static int __ref set_enabled(const char *val, const struct kernel_param *kp) {
+static int __ref set_enabled(const char *val,
+			     const struct kernel_param *kp)
+{
 	int ret;
-	unsigned int cpu;
 
 	ret = param_set_bool(val, kp);
 	if (enabled) {
 #ifdef CONFIG_SCHED_CORE_CTL
 		disable_core_control(true);
 #endif
-		for_each_possible_cpu(cpu) {
-			if (!cpu_online(cpu))
-				cpu_up(cpu);
-		}
-		queue_delayed_work(asmp_workq, &asmp_work,
-				msecs_to_jiffies(asmp_param.delay));
-		pr_info(ASMP_TAG"enabled\n");
+		asmp_start();
 	} else {
-		cancel_delayed_work_sync(&asmp_work);
-		for_each_possible_cpu(cpu) {
-			if (!cpu_online(cpu))
-				cpu_up(cpu);
-		}
-		pr_info(ASMP_TAG"disabled\n");
+		asmp_stop();
 #ifdef CONFIG_SCHED_CORE_CTL
 		disable_core_control(false);
 #endif
@@ -274,15 +300,7 @@ static struct attribute_group asmp_attr_group = {
 /****************************** SYSFS END ******************************/
 
 static int __init asmp_init(void) {
-	int rc;
-
-	asmp_workq = alloc_workqueue("asmp", WQ_HIGHPRI, 0);
-	if (!asmp_workq)
-		return -ENOMEM;
-	INIT_DELAYED_WORK(&asmp_work, asmp_work_fn);
-	if (enabled)
-		queue_delayed_work(asmp_workq, &asmp_work,
-				   msecs_to_jiffies(ASMP_STARTDELAY));
+	int rc = 0;
 
 	asmp_kobject = kobject_create_and_add("autosmp", kernel_kobj);
 	if (asmp_kobject) {
@@ -293,6 +311,7 @@ static int __init asmp_init(void) {
 		pr_warn(ASMP_TAG"ERROR, create sysfs kobj");
 
 	pr_info(ASMP_TAG"initialized\n");
+
 	return 0;
 }
 late_initcall(asmp_init);
