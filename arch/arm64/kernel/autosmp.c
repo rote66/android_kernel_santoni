@@ -167,13 +167,19 @@ static void __ref asmp_work_fn(struct work_struct *work) {
 	queue_delayed_work(asmp_workq, &asmp_work, delay_jif);
 }
 
+#ifdef CONFIG_SCHED_CORE_CTL
+extern void disable_core_control(bool disable);
+#endif
 static int asmp_start(void)
 {
 	unsigned int cpu;
+	int ret = 0;
 
 	asmp_workq = alloc_workqueue("asmp", WQ_HIGHPRI, 0);
-	if (!asmp_workq)
-		return -ENOMEM;
+	if (!asmp_workq) {
+		ret = -ENOMEM;
+		goto err_out;
+	}
 
 	for_each_possible_cpu(cpu) {
 		if (!cpu_online(cpu))
@@ -186,7 +192,13 @@ static int asmp_start(void)
 
 	pr_info(ASMP_TAG"enabled\n");
 
-	return 0;
+	return ret;
+
+err_out:
+#ifdef CONFIG_SCHED_CORE_CTL
+	disable_core_control(false);
+#endif
+	return ret;
 }
 
 static void asmp_stop(void)
@@ -204,9 +216,6 @@ static void asmp_stop(void)
 	pr_info(ASMP_TAG"disabled\n");
 }
 
-#ifdef CONFIG_SCHED_CORE_CTL
-extern void disable_core_control(bool disable);
-#endif
 static int __ref set_enabled(const char *val,
 			     const struct kernel_param *kp)
 {
