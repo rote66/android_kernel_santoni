@@ -36,6 +36,11 @@
 static struct delayed_work asmp_work;
 static struct workqueue_struct *asmp_workq;
 
+/*
+ * Flag and NOT editable/tunabled
+ */
+static bool started = false;
+
 static struct asmp_param_struct {
 	unsigned int delay;
 	unsigned int max_cpus;
@@ -175,6 +180,11 @@ static int asmp_start(void)
 	unsigned int cpu;
 	int ret = 0;
 
+	if (started) {
+		pr_info(ASMP_TAG"already enabled\n");
+		return ret;
+	}
+
 	asmp_workq = alloc_workqueue("asmp", WQ_HIGHPRI, 0);
 	if (!asmp_workq) {
 		ret = -ENOMEM;
@@ -189,6 +199,8 @@ static int asmp_start(void)
 	INIT_DELAYED_WORK(&asmp_work, asmp_work_fn);
 	queue_delayed_work(asmp_workq, &asmp_work,
 			msecs_to_jiffies(asmp_param.delay));
+
+	started = true;
 
 	pr_info(ASMP_TAG"enabled\n");
 
@@ -205,6 +217,11 @@ static void asmp_stop(void)
 {
 	unsigned int cpu;
 
+	if (!started) {
+		pr_info(ASMP_TAG"already disabled\n");
+		return;
+	}
+
 	cancel_delayed_work_sync(&asmp_work);
 	destroy_workqueue(asmp_workq);
 
@@ -212,6 +229,8 @@ static void asmp_stop(void)
 		if (!cpu_online(cpu))
 			cpu_up(cpu);
 	}
+
+	started = false;
 
 	pr_info(ASMP_TAG"disabled\n");
 }
