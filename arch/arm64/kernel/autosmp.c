@@ -46,6 +46,7 @@ static bool started = false;
 
 static struct asmp_param_struct {
 	unsigned int delay;
+	bool scroff_single_core;
 	unsigned int max_cpus;
 	unsigned int min_cpus;
 	unsigned int cpufreq_up;
@@ -54,6 +55,7 @@ static struct asmp_param_struct {
 	unsigned int cycle_down;
 } asmp_param = {
 	.delay = 100,
+	.scroff_single_core = true,
 	.max_cpus = 4, /* Max cpu per cluster ! */
 	.min_cpus = 2,
 	.cpufreq_up = 90,
@@ -213,10 +215,13 @@ static int asmp_notifier_cb(struct notifier_block *nb,
 	if (evdata && evdata->data &&
 		event == FB_EVENT_BLANK) {
 		blank = evdata->data;
-		if (*blank == FB_BLANK_UNBLANK)
-			asmp_resume();
-		else if (*blank == FB_BLANK_POWERDOWN)
-			asmp_suspend();
+		if (*blank == FB_BLANK_UNBLANK) {
+			if (asmp_param.scroff_single_core)
+				asmp_resume();
+		} else if (*blank == FB_BLANK_POWERDOWN) {
+			if (asmp_param.scroff_single_core)
+				asmp_suspend();
+		}
 	}
 
 	return 0;
@@ -338,6 +343,7 @@ static ssize_t show_##file_name						\
 	return sprintf(buf, "%u\n", asmp_param.object);			\
 }
 show_one(delay, delay);
+show_one(scroff_single_core, scroff_single_core);
 show_one(min_cpus, min_cpus);
 show_one(max_cpus, max_cpus);
 show_one(cpufreq_up,cpufreq_up);
@@ -359,6 +365,7 @@ static ssize_t store_##file_name					\
 }									\
 define_one_global_rw(file_name);
 store_one(delay, delay);
+store_one(scroff_single_core, scroff_single_core);
 store_one(min_cpus, min_cpus);
 store_one(max_cpus, max_cpus);
 store_one(cpufreq_up, cpufreq_up);
@@ -368,6 +375,7 @@ store_one(cycle_down, cycle_down);
 
 static struct attribute *asmp_attributes[] = {
 	&delay.attr,
+	&scroff_single_core.attr,
 	&min_cpus.attr,
 	&max_cpus.attr,
 	&cpufreq_up.attr,
