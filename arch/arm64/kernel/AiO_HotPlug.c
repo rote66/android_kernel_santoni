@@ -55,6 +55,32 @@ static struct workqueue_struct *AiO_wq;
 
 int AiO_HotPlug = AIO_TOGGLE;
 
+static void aio_online_cpus(unsigned int cpu)
+{
+	struct device *dev;
+	int ret;
+
+	lock_device_hotplug();
+	dev = get_cpu_device(cpu);
+	ret = device_online(dev);
+	if (ret < 0)
+		pr_info("%s: failed online cpu %d\n", __func__, cpu);
+	unlock_device_hotplug();
+}
+
+static void aio_offline_cpus(unsigned int cpu)
+{
+	struct device *dev;
+	int ret;
+
+	lock_device_hotplug();
+	dev = get_cpu_device(cpu);
+	ret = device_offline(dev);
+	if (ret < 0)
+		pr_info("%s: failed offline cpu %d\n", __func__, cpu);
+	unlock_device_hotplug();
+}
+
 static void __ref AiO_HotPlug_work(struct work_struct *work)
 {
          // Operations for a Traditional Quad-Core SoC.
@@ -62,40 +88,40 @@ static void __ref AiO_HotPlug_work(struct work_struct *work)
 	     if (AiO.cores == 1)
 	     {	   
 	        if (cpu_online(3))
-	           cpu_down(3);
+	           aio_offline_cpus(3);
 	        if (cpu_online(2))
-	           cpu_down(2);
+	           aio_offline_cpus(2);
 	        if (cpu_online(1)) 
-                   cpu_down(1);
+                   aio_offline_cpus(1);
 	     }
 	     else if (AiO.cores == 2)
 	     {
 	   	     if (!cpu_online(1))
-	      	        cpu_up(1);
+	      	        aio_online_cpus(1);
 	   
 	   	     if (cpu_online(3))
-	                cpu_down(3);
+	                aio_offline_cpus(3);
 	   	     if (cpu_online(2))
-	                cpu_down(2);
+	                aio_offline_cpus(2);
 	     }
 	     else if (AiO.cores == 3)
 	     {
 	   	     if (!cpu_online(1))
-	      	        cpu_up(1);
+	      	        aio_online_cpus(1);
 	   	     if (!cpu_online(2))
-	      	        cpu_up(2);
+	      	        aio_online_cpus(2);
 	   
 	   	     if (cpu_online(3))
-	      	        cpu_down(3);
+	      	        aio_offline_cpus(3);
 	     }
 	     else if (AiO.cores == 4)
 	     {
 	           if (!cpu_online(1))
-	      	      cpu_up(1);
+	      	      aio_online_cpus(1);
 	           if (!cpu_online(2))
-	      	      cpu_up(2);
+	      	      aio_online_cpus(2);
 	           if (!cpu_online(3))
-	      	      cpu_up(3);
+	      	      aio_online_cpus(3);
 	     }
 	  // Operations for a big.LITTLE SoC.
 	  #elif (NR_CPUS == 6 || NR_CPUS == 8)
@@ -103,119 +129,119 @@ static void __ref AiO_HotPlug_work(struct work_struct *work)
                 if (AiO.big_cores == 0)
 	        {
 	           if (cpu_online(3))
-	              cpu_down(3);
+	              aio_offline_cpus(3);
 	   	   if (cpu_online(2))
-	      	      cpu_down(2);
+	      	      aio_offline_cpus(2);
 	   	   if (cpu_online(1)) 
-              	      cpu_down(1);
+              	      aio_offline_cpus(1);
 	   	   if (cpu_online(0))
-	      	      cpu_down(0);
+	      	      aio_offline_cpus(0);
 	        }
 	        else if (AiO.big_cores == 1)
 	        {
 	                if (!cpu_online(0))
-	                   cpu_up(0);
+	                   aio_online_cpus(0);
 	   
 	                if (cpu_online(3))
-	          	   cpu_down(3);
+	          	   aio_offline_cpus(3);
 	      	        if (cpu_online(2))
-	           	   cpu_down(2);
+	           	   aio_offline_cpus(2);
 	        	if (cpu_online(1)) 
-                   	   cpu_down(1);
+                   	   aio_offline_cpus(1);
 		}
 		else if (AiO.big_cores == 2)
 		{
 	        	if (!cpu_online(0))
-	           	   cpu_up(0);
+	           	   aio_online_cpus(0);
 	   		if (!cpu_online(1))
-	      	   	   cpu_up(1);
+	      	   	   aio_online_cpus(1);
 	   
 	   		if (cpu_online(3))
-	           	   cpu_down(3);
+	           	   aio_offline_cpus(3);
 	   		if (cpu_online(2))
-	           	   cpu_down(2);
+	           	   aio_offline_cpus(2);
 		}
 		else if (AiO.big_cores == 3)
 		{
 	   		if (!cpu_online(0))
-	           	   cpu_up(0);
+	           	   aio_online_cpus(0);
 	   		if (!cpu_online(1))
-	      	   	   cpu_up(1);
+	      	   	   aio_online_cpus(1);
 	   		if (!cpu_online(2))
-	      	   	   cpu_up(2);
+	      	   	   aio_online_cpus(2);
 	   
 	   		if (cpu_online(3))
-	      	   	   cpu_down(3);
+	      	   	   aio_offline_cpus(3);
 		}
 		else if (AiO.big_cores == 4)
 		{
 	   		if (!cpu_online(0))
-	      	   	   cpu_up(0);
+	      	   	   aio_online_cpus(0);
 	   		if (!cpu_online(1))
-	      	   	   cpu_up(1);
+	      	   	   aio_online_cpus(1);
 	   		if (!cpu_online(2))
-	      	   	   cpu_up(2);
+	      	   	   aio_online_cpus(2);
 	   		if (!cpu_online(3))
-	      	   	   cpu_up(3);
+	      	   	   aio_online_cpus(3);
 		}
 		// Operations for LITTLE Cluster.
 		if (AiO.LITTLE_cores == 0)
 		{
 	   	   if (cpu_online(7))
-	      	      cpu_down(7);
+	      	      aio_offline_cpus(7);
 	   	   if (cpu_online(6))
-	      	      cpu_down(6);
+	      	      aio_offline_cpus(6);
 	  	   if (cpu_online(5)) 
-             	      cpu_down(5);
+             	      aio_offline_cpus(5);
 	   	   if (cpu_online(4))
-	      	      cpu_down(4);
+	      	      aio_offline_cpus(4);
 		}
 		else if (AiO.LITTLE_cores == 1)
 		{
 	   		if (!cpu_online(4))
-	      	   	   cpu_up(4);
+	      	   	   aio_online_cpus(4);
 	   
 	   		if (cpu_online(7))
-	      	   	   cpu_down(7);
+	      	   	   aio_offline_cpus(7);
 	   		if (cpu_online(6))
-	      	   	   cpu_down(6);
+	      	   	   aio_offline_cpus(6);
 	   		if (cpu_online(5)) 
-              	   	   cpu_down(5);
+              	   	   aio_offline_cpus(5);
 		}
 		else if (AiO.LITTLE_cores == 2)
 		{
 	   		if (!cpu_online(4))
-	           	   cpu_up(4);
+	           	   aio_online_cpus(4);
 	   		if (!cpu_online(5))
-	           	   cpu_up(5);
+	           	   aio_online_cpus(5);
 	   
 	   		if (cpu_online(7))
-	      	   	   cpu_down(7);
+	      	   	   aio_offline_cpus(7);
 	   		if (cpu_online(6))
-	                   cpu_down(6);
+	                   aio_offline_cpus(6);
 		}
 		else if (AiO.LITTLE_cores == 3)
 		{
 	   		if (!cpu_online(4))
-	      	   	   cpu_up(4);
+	      	   	   aio_online_cpus(4);
 	   		if (!cpu_online(5))
-	      	   	   cpu_up(5);
+	      	   	   aio_online_cpus(5);
 	   		if (!cpu_online(6))
-	      	   	   cpu_up(6);
+	      	   	   aio_online_cpus(6);
 	   
 	   		if (cpu_online(7))
-	      	  	   cpu_down(7);
+	      	  	   aio_offline_cpus(7);
 		}
 		else if (AiO.LITTLE_cores == 4)
 		{
 	  		if (!cpu_online(4))
-	           	   cpu_up(4);
+	           	   aio_online_cpus(4);
 	   		if (!cpu_online(5))
-	           	   cpu_up(5);
+	           	   aio_online_cpus(5);
 	   		if (!cpu_online(6))
-	           	   cpu_up(6);
+	           	   aio_online_cpus(6);
 	   		if (!cpu_online(7))
-	           	   cpu_up(7);
+	           	   aio_online_cpus(7);
                 }
           #endif
 
@@ -260,7 +286,7 @@ static void __ref AiO_HotPlug_stop(void)
 	/* Wake-Up All the Cores */
 	for_each_possible_cpu(cpu)
 	    if (!cpu_online(cpu))
-	       cpu_up(cpu);
+	       aio_online_cpus(cpu);
 }
 
 // Begin sysFS Interface
