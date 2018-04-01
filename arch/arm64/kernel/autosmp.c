@@ -76,6 +76,32 @@ static unsigned int cycle = 0, delay0 = 0;
 static unsigned long delay_jif = 0;
 int asmp_enabled __read_mostly = 0;
 
+static void asmp_online_cpus(unsigned int cpu)
+{
+	struct device *dev;
+	int ret;
+
+	lock_device_hotplug();
+	dev = get_cpu_device(cpu);
+	ret = device_online(dev);
+	if (ret < 0)
+		pr_info("%s: failed online cpu %d\n", __func__, cpu);
+	unlock_device_hotplug();
+}
+
+static void asmp_offline_cpus(unsigned int cpu)
+{
+	struct device *dev;
+	int ret;
+
+	lock_device_hotplug();
+	dev = get_cpu_device(cpu);
+	ret = device_offline(dev);
+	if (ret < 0)
+		pr_info("%s: failed offline cpu %d\n", __func__, cpu);
+	unlock_device_hotplug();
+}
+
 static void __ref asmp_work_fn(struct work_struct *work) {
 	unsigned int cpu, rate;
 	unsigned int slow_cpu_bc = 0, slow_cpu_lc = 4;
@@ -88,9 +114,9 @@ static void __ref asmp_work_fn(struct work_struct *work) {
 	int nr_cpu_online_lc = 0, nr_cpu_online_bc = 0;
 
 	if (!cpu_online(0))
-		cpu_up(0);
+		asmp_online_cpus(0);
 	if (!cpu_online(4))
-		cpu_up(4);
+		asmp_online_cpus(4);
 
 	cycle++;
 
@@ -148,14 +174,14 @@ static void __ref asmp_work_fn(struct work_struct *work) {
 		if ((nr_cpu_online_lc < asmp_param.max_cpus_lc) &&
 		    (cycle >= asmp_param.cycle_up)) {
 			cpu = cpumask_next_zero(4, cpu_online_mask);
-			cpu_up(cpu);
+			asmp_online_cpus(cpu);
 			cycle = 0;
 		}
 	/* unplug slowest core if all online cores are under down_rate limit */
 	} else if ((slow_cpu_lc > 4) && (fast_rate_lc < down_rate_lc)) {
 		if ((nr_cpu_online_lc > asmp_param.min_cpus_lc) &&
 		    (cycle >= asmp_param.cycle_down)) {
- 			cpu_down(slow_cpu_lc);
+ 			asmp_offline_cpus(slow_cpu_lc);
 			cycle = 0;
 		}
 	} /* else do nothing */
@@ -170,14 +196,14 @@ static void __ref asmp_work_fn(struct work_struct *work) {
 		if ((nr_cpu_online_bc < asmp_param.max_cpus_bc) &&
 		    (cycle >= asmp_param.cycle_up)) {
 			cpu = cpumask_next_zero(0, cpu_online_mask);
-			cpu_up(cpu);
+			asmp_online_cpus(cpu);
 			cycle = 0;
 		}
 	/* unplug slowest core if all online cores are under down_rate limit */
 	} else if (slow_cpu_bc && (fast_rate_bc < down_rate_bc)) {
 		if ((nr_cpu_online_bc > asmp_param.min_cpus_bc) &&
 		    (cycle >= asmp_param.cycle_down)) {
- 			cpu_down(slow_cpu_bc);
+ 			asmp_offline_cpus(slow_cpu_bc);
 			cycle = 0;
 		}
 	} /* else do nothing */
@@ -185,7 +211,7 @@ static void __ref asmp_work_fn(struct work_struct *work) {
 	queue_delayed_work(asmp_workq, &asmp_work, delay_jif);
 }
 
-static void asmp_suspend(void)
+static void __ref asmp_suspend(void)
 {
 	unsigned int cpu;
 
@@ -195,7 +221,7 @@ static void asmp_suspend(void)
 	/* leave only cpu 0 and cpu 4 to stay online */
 	for_each_online_cpu(cpu) {
 		if (cpu && cpu != 4)
-			cpu_down(cpu);
+			asmp_offline_cpus(cpu);
 	}
 }
 
@@ -206,7 +232,7 @@ static void __ref asmp_resume(void)
 	/* Force all cpu's to online when resumed */
 	for_each_possible_cpu(cpu) {
 		if (!cpu_online(cpu))
-			cpu_up(cpu);
+			asmp_online_cpus(cpu);
 	}
 
 	/* rescheduled queue atleast on 3 seconds */
@@ -267,7 +293,7 @@ static int __ref asmp_start(void)
 
 	for_each_possible_cpu(cpu) {
 		if (!cpu_online(cpu))
-			cpu_up(cpu);
+			asmp_online_cpus(cpu);
 	}
 
 	INIT_DELAYED_WORK(&asmp_work, asmp_work_fn);
@@ -308,7 +334,7 @@ static void __ref asmp_stop(void)
 
 	for_each_possible_cpu(cpu) {
 		if (!cpu_online(cpu))
-			cpu_up(cpu);
+			asmp_online_cpus(cpu);
 	}
 
 	started = false;
