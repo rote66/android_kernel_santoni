@@ -284,9 +284,10 @@ static void __ref AiO_HotPlug_stop(void)
 	destroy_workqueue(AiO_wq);
 
 	/* Wake-Up All the Cores */
-	for_each_possible_cpu(cpu)
+	for_each_possible_cpu(cpu) {
 	    if (!cpu_online(cpu))
 	       aio_online_cpus(cpu);
+	}
 }
 
 // Begin sysFS Interface
