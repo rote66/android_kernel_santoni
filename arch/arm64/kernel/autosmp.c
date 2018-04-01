@@ -74,7 +74,7 @@ static struct asmp_param_struct {
 
 static unsigned int cycle = 0, delay0 = 0;
 static unsigned long delay_jif = 0;
-static int enabled __read_mostly = 0;
+int asmp_enabled __read_mostly = 0;
 
 static void __ref asmp_work_fn(struct work_struct *work) {
 	unsigned int cpu, rate;
@@ -238,10 +238,21 @@ static int asmp_notifier_cb(struct notifier_block *nb,
 #ifdef CONFIG_SCHED_CORE_CTL
 extern void disable_core_control(bool disable);
 #endif
+#ifdef CONFIG_AIO_HOTPLUG
+extern int AiO_HotPlug;
+#endif
 static int asmp_start(void)
 {
 	unsigned int cpu;
 	int ret = 0;
+
+#ifdef CONFIG_AIO_HOTPLUG
+	if (AiO_HotPlug) {
+		asmp_enabled = 0;
+		pr_info(ASMP_TAG"You can't enable more than 1 hotplug!\n");
+		return ret;
+	}
+#endif	
 
 	if (started) {
 		pr_info(ASMP_TAG"already enabled\n");
@@ -311,7 +322,7 @@ static int __ref set_enabled(const char *val,
 	int ret;
 
 	ret = param_set_bool(val, kp);
-	if (enabled) {
+	if (asmp_enabled) {
 #ifdef CONFIG_SCHED_CORE_CTL
 		disable_core_control(true);
 #endif
@@ -330,7 +341,7 @@ static struct kernel_param_ops module_ops = {
 	.get = param_get_bool,
 };
 
-module_param_cb(enabled, &module_ops, &enabled, 0644);
+module_param_cb(enabled, &module_ops, &asmp_enabled, 0644);
 MODULE_PARM_DESC(enabled, "hotplug/unplug cpu cores based on cpu load");
 
 /***************************** SYSFS START *****************************/

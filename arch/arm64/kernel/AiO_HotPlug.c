@@ -53,7 +53,7 @@ static struct AiO_HotPlug {
 static struct delayed_work AiO_work;
 static struct workqueue_struct *AiO_wq;
 
-int AiO_HotPlug;
+int AiO_HotPlug = AIO_TOGGLE;
 
 static void __ref AiO_HotPlug_work(struct work_struct *work)
 {
@@ -271,6 +271,9 @@ static ssize_t show_toggle(struct kobject *kobj,
 	return sprintf(buf, "%u\n", AiO.toggle);
 }
 
+#ifdef CONFIG_ASMP
+extern int asmp_enabled __read_mostly;
+#endif
 static ssize_t store_toggle(struct kobject *kobj,
 			     struct kobj_attribute *attr,
 			     const char *buf, size_t count)
@@ -284,6 +287,13 @@ static ssize_t store_toggle(struct kobject *kobj,
 
 	if (val == AiO.toggle)
 	   return count;
+
+#ifdef CONFIG_ASMP
+	if (asmp_enabled) {
+		pr_info(AIO_HOTPLUG" You can't enable more than 1 hotplug!\n");
+		return count;
+	}
+#endif
 
 	AiO.toggle = val;
 	AiO_HotPlug = AiO.toggle;
