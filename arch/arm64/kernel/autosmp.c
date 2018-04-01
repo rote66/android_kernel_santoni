@@ -241,7 +241,7 @@ extern void disable_core_control(bool disable);
 #ifdef CONFIG_AIO_HOTPLUG
 extern int AiO_HotPlug;
 #endif
-static int asmp_start(void)
+static int __ref asmp_start(void)
 {
 	unsigned int cpu;
 	int ret = 0;
@@ -291,7 +291,7 @@ err_out:
 	return ret;
 }
 
-static void asmp_stop(void)
+static void __ref asmp_stop(void)
 {
 	unsigned int cpu;
 
@@ -316,7 +316,7 @@ static void asmp_stop(void)
 	pr_info(ASMP_TAG"disabled\n");
 }
 
-static int __ref set_enabled(const char *val,
+static int set_enabled(const char *val,
 			     const struct kernel_param *kp)
 {
 	int ret;
