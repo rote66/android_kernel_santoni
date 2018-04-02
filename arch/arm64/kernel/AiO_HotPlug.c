@@ -278,7 +278,7 @@ err_out:
 
 static void __ref AiO_HotPlug_stop(void)
 {
-	int cpu;
+	unsigned int cpu;
 
 	cancel_delayed_work_sync(&AiO_work);
 	destroy_workqueue(AiO_wq);
