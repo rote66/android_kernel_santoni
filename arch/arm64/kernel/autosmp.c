@@ -454,16 +454,101 @@ static ssize_t store_##file_name					\
 define_one_global_rw(file_name);
 store_one(delay, delay);
 store_one(scroff_single_core, scroff_single_core);
-store_one(min_cpus_lc, min_cpus_lc);
-store_one(min_cpus_bc, min_cpus_bc);
-store_one(max_cpus_lc, max_cpus_lc);
-store_one(max_cpus_bc, max_cpus_bc);
 store_one(cpufreq_up_lc, cpufreq_up_lc);
 store_one(cpufreq_up_bc, cpufreq_up_bc);
 store_one(cpufreq_down_lc, cpufreq_down_lc);
 store_one(cpufreq_down_bc, cpufreq_down_bc);
 store_one(cycle_up, cycle_up);
 store_one(cycle_down, cycle_down);
+
+static ssize_t store_max_cpus_lc(struct kobject *a,
+		      struct attribute *b, const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+
+	ret = sscanf(buf, "%u", &input);
+	if (ret != 1 ||
+		input < asmp_param.min_cpus_lc)
+		return -EINVAL;
+
+	if (input < 1)
+		input = 1;
+	else if  (input > 4)
+		input = 4;
+
+	asmp_param.max_cpus_lc = input;
+
+	return count;
+}
+
+static ssize_t store_max_cpus_bc(struct kobject *a,
+		      struct attribute *b, const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+
+	ret = sscanf(buf, "%u", &input);
+	if (ret != 1 ||
+		input < asmp_param.min_cpus_bc)
+		return -EINVAL;
+
+	if (input < 1)
+		input = 1;
+	else if (input > 4)
+		input = 4;
+
+	asmp_param.max_cpus_bc = input;
+
+	return count;
+}
+
+static ssize_t store_min_cpus_lc(struct kobject *a,
+		      struct attribute *b, const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+
+	ret = sscanf(buf, "%u", &input);
+	if (ret != 1 ||
+		input > asmp_param.max_cpus_lc)
+		return -EINVAL;
+
+	if (input < 1)
+		input = 1;
+	else if (input > 4)
+		input = 4;
+
+	asmp_param.min_cpus_lc = input;
+
+	return count;
+}
+
+static ssize_t store_min_cpus_bc(struct kobject *a,
+		      struct attribute *b, const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+
+	ret = sscanf(buf, "%u", &input);
+	if (ret != 1 ||
+		input > asmp_param.max_cpus_bc)
+		return -EINVAL;
+
+	if (input < 1)
+		input = 1;
+	else if (input > 4)
+		input = 4;
+
+	asmp_param.min_cpus_bc = input;
+
+	return count;
+}
+
+define_one_global_rw(min_cpus_lc);
+define_one_global_rw(min_cpus_bc);
+define_one_global_rw(max_cpus_lc);
+define_one_global_rw(max_cpus_bc);
 
 static struct attribute *asmp_attributes[] = {
 	&delay.attr,
