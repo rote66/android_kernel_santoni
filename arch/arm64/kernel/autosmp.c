@@ -144,10 +144,11 @@ static void __ref asmp_work_fn(struct work_struct *work) {
 	unsigned int up_load_bc, down_load_bc;
 	int nr_cpu_online_lc = 0, nr_cpu_online_bc = 0;
 
-	if (!cpu_online(0))
-		asmp_online_cpus(0);
+	/* Perform always check cpu 0/4 */
 	if (!cpu_online(4))
 		asmp_online_cpus(4);
+	if (!cpu_online(0))
+		asmp_online_cpus(0);
 
 	cycle++;
 
@@ -193,10 +194,15 @@ static void __ref asmp_work_fn(struct work_struct *work) {
 	}
 	put_online_cpus();
 
+	/********************************************************************
+	 *                     Little Cluster cpu(4..7)                     *
+	 ********************************************************************/
 	if (cpu_load_lc < slow_load_lc)
 		slow_load_lc = cpu_load_lc;
 
-	nr_cpu_online_lc += 1;
+	/* Always check cpu 4 before + up nr */
+	if (cpu_online(4))
+		nr_cpu_online_lc += 1;
 
 	/* hotplug one core if all online cores are over up_load limit */
 	if (slow_load_lc > up_load_lc) {
@@ -213,12 +219,17 @@ static void __ref asmp_work_fn(struct work_struct *work) {
  			asmp_offline_cpus(slow_cpu_lc);
 			cycle = 0;
 		}
-	} /* else do nothing */
+	}
 
+	/********************************************************************
+	 *                      Big Cluster cpu(0..3)                       *
+	 ********************************************************************/
 	if (cpu_load_bc < slow_load_bc)
 		slow_load_bc = cpu_load_bc;
 
-	nr_cpu_online_bc += 1;
+	/* Always check cpu 0 before + up nr */
+	if (cpu_online(0))
+		nr_cpu_online_bc += 1;
 
 	/* hotplug one core if all online cores are over up_load limit */
 	if (slow_load_bc > up_load_bc) {
@@ -235,7 +246,7 @@ static void __ref asmp_work_fn(struct work_struct *work) {
  			asmp_offline_cpus(slow_cpu_bc);
 			cycle = 0;
 		}
-	} /* else do nothing */
+	}
 
 	queue_delayed_work(asmp_workq, &asmp_work, delay_jif);
 }
