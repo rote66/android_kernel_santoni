@@ -133,8 +133,15 @@ static int get_cpu_loads(unsigned int cpu)
 	return max_load;
 }
 
+static void update_prev_idle(unsigned int cpu)
+{
+	/* Record cpu idle data for next calculation loads */
+	struct asmp_load_data *data = &per_cpu(asmp_data, cpu);
+	data->prev_cpu_idle = get_cpu_idle_time(cpu,
+				&data->prev_cpu_wall, 0);
+}
+
 static void __ref asmp_work_fn(struct work_struct *work) {
-	struct asmp_load_data *data = NULL;
 	unsigned int cpu = 0, load = 0;
 	unsigned int slow_cpu_bc = 0, slow_cpu_lc = 4;
 	unsigned int cpu_load_bc = 0, fast_load_bc = 0;
@@ -265,10 +272,7 @@ static void __ref asmp_work_fn(struct work_struct *work) {
 			if (!cpu_online(cpu))
 				asmp_online_cpus(cpu);
 
-			/* Record cpu idle data for next calculation loads */
-			data = &per_cpu(asmp_data, cpu);
-			data->prev_cpu_idle = get_cpu_idle_time(cpu,
-							&data->prev_cpu_wall, 0);
+			update_prev_idle(cpu);
 		}
 		delay_jif = msecs_to_jiffies(2000);
 	}
@@ -298,6 +302,8 @@ static void __ref asmp_resume(void)
 	for_each_possible_cpu(cpu) {
 		if (!cpu_online(cpu))
 			asmp_online_cpus(cpu);
+
+		update_prev_idle(cpu);
 	}
 
 	/* rescheduled queue atleast on 3 seconds */
@@ -331,7 +337,6 @@ extern void disable_core_control(bool disable);
 #endif
 static int __ref asmp_start(void)
 {
-	struct asmp_load_data *data = NULL;
 	unsigned int cpu = 0;
 	int ret = 0;
 
@@ -351,10 +356,7 @@ static int __ref asmp_start(void)
 		if (!cpu_online(cpu))
 			asmp_online_cpus(cpu);
 
-		/* Record cpu idle data for next calculation loads */
-		data = &per_cpu(asmp_data, cpu);
-		data->prev_cpu_idle = get_cpu_idle_time(cpu,
-						&data->prev_cpu_wall, 0);
+		update_prev_idle(cpu);
 	}
 
 	INIT_DELAYED_WORK(&asmp_work, asmp_work_fn);
