@@ -33,7 +33,6 @@
 #include <linux/fb.h>
 
 #define ASMP_TAG "AutoSMP: "
-#define ASMP_STARTDELAY 20000
 
 struct asmp_load_data {
 	u64 prev_cpu_idle;
@@ -68,12 +67,12 @@ static struct asmp_param_struct {
 	.scroff_single_core = true,
 	.max_cpus_bc = 4, /* Max cpu Big cluster ! */
 	.max_cpus_lc = 4, /* Max cpu Little cluster ! */
-	.min_cpus_bc = 1, /* Minimum Big cluster online */
+	.min_cpus_bc = 2, /* Minimum Big cluster online */
 	.min_cpus_lc = 2, /* Minimum Little cluster online */
-	.cpufreq_up_bc = 85,
-	.cpufreq_up_lc = 80,
-	.cpufreq_down_bc = 40,
-	.cpufreq_down_lc = 40,
+	.cpufreq_up_bc = 80,
+	.cpufreq_up_lc = 70,
+	.cpufreq_down_bc = 25,
+	.cpufreq_down_lc = 30,
 	.cycle_up = 1,
 	.cycle_down = 1,
 };
@@ -85,7 +84,7 @@ int asmp_enabled __read_mostly = 0;
 static void asmp_online_cpus(unsigned int cpu)
 {
 	struct device *dev;
-	int ret;
+	int ret = 0;
 
 	lock_device_hotplug();
 	dev = get_cpu_device(cpu);
@@ -98,7 +97,7 @@ static void asmp_online_cpus(unsigned int cpu)
 static void asmp_offline_cpus(unsigned int cpu)
 {
 	struct device *dev;
-	int ret;
+	int ret = 0;
 
 	lock_device_hotplug();
 	dev = get_cpu_device(cpu);
@@ -135,13 +134,16 @@ static int get_cpu_loads(unsigned int cpu)
 }
 
 static void __ref asmp_work_fn(struct work_struct *work) {
-	unsigned int cpu, load;
+	struct asmp_load_data *data = NULL;
+	unsigned int cpu = 0, load = 0;
 	unsigned int slow_cpu_bc = 0, slow_cpu_lc = 4;
-	unsigned int cpu_load_bc, fast_load_bc;
-	unsigned int cpu_load_lc, fast_load_lc;
+	unsigned int cpu_load_bc = 0, fast_load_bc = 0;
+	unsigned int cpu_load_lc = 0, fast_load_lc = 0;
 	unsigned int slow_load_lc = 100, slow_load_bc = 100;
-	unsigned int up_load_lc, down_load_lc;
-	unsigned int up_load_bc, down_load_bc;
+	unsigned int up_load_lc = 0, down_load_lc = 0;
+	unsigned int up_load_bc = 0, down_load_bc = 0;
+	unsigned int max_cpu_lc = 0, max_cpu_bc = 0;
+	unsigned int min_cpu_lc = 0, min_cpu_bc = 0;
 	int nr_cpu_online_lc = 0, nr_cpu_online_bc = 0;
 
 	/* Perform always check cpu 0/4 */
@@ -160,10 +162,14 @@ static void __ref asmp_work_fn(struct work_struct *work) {
 	/* Little Cluster */
 	up_load_lc   = asmp_param.cpufreq_up_lc;
 	down_load_lc = asmp_param.cpufreq_down_lc;
+	max_cpu_lc = asmp_param.max_cpus_lc;
+	min_cpu_lc = asmp_param.min_cpus_lc;
 
 	/* Big Cluster */
 	up_load_bc   = asmp_param.cpufreq_up_bc;
 	down_load_bc = asmp_param.cpufreq_down_bc;
+	max_cpu_bc = asmp_param.max_cpus_bc;
+	min_cpu_bc = asmp_param.min_cpus_bc;
 
 	/* find current max and min cpu freq to estimate load */
 	get_online_cpus();
@@ -206,7 +212,7 @@ static void __ref asmp_work_fn(struct work_struct *work) {
 
 	/* hotplug one core if all online cores are over up_load limit */
 	if (slow_load_lc > up_load_lc) {
-		if ((nr_cpu_online_lc < asmp_param.max_cpus_lc) &&
+		if ((nr_cpu_online_lc < max_cpu_lc) &&
 		    (cycle >= asmp_param.cycle_up)) {
 			cpu = cpumask_next_zero(4, cpu_online_mask);
 			asmp_online_cpus(cpu);
@@ -214,7 +220,7 @@ static void __ref asmp_work_fn(struct work_struct *work) {
 		}
 	/* unplug slowest core if all online cores are under down_load limit */
 	} else if ((slow_cpu_lc > 4) && (fast_load_lc < down_load_lc)) {
-		if ((nr_cpu_online_lc > asmp_param.min_cpus_lc) &&
+		if ((nr_cpu_online_lc > min_cpu_lc) &&
 		    (cycle >= asmp_param.cycle_down)) {
  			asmp_offline_cpus(slow_cpu_lc);
 			cycle = 0;
@@ -233,7 +239,7 @@ static void __ref asmp_work_fn(struct work_struct *work) {
 
 	/* hotplug one core if all online cores are over up_load limit */
 	if (slow_load_bc > up_load_bc) {
-		if ((nr_cpu_online_bc < asmp_param.max_cpus_bc) &&
+		if ((nr_cpu_online_bc < max_cpu_bc) &&
 		    (cycle >= asmp_param.cycle_up)) {
 			cpu = cpumask_next_zero(0, cpu_online_mask);
 			asmp_online_cpus(cpu);
@@ -241,11 +247,30 @@ static void __ref asmp_work_fn(struct work_struct *work) {
 		}
 	/* unplug slowest core if all online cores are under down_load limit */
 	} else if (slow_cpu_bc && (fast_load_bc < down_load_bc)) {
-		if ((nr_cpu_online_bc > asmp_param.min_cpus_bc) &&
+		if ((nr_cpu_online_bc > min_cpu_bc) &&
 		    (cycle >= asmp_param.cycle_down)) {
  			asmp_offline_cpus(slow_cpu_bc);
 			cycle = 0;
 		}
+	}
+
+	/*
+	 * Reflect to any users configure about min cpus.
+	 * give a delay for atleast 2 seconds to prevent
+	 * wrong cpu loads calculation.
+	 */
+	if (nr_cpu_online_lc < min_cpu_lc || nr_cpu_online_bc < min_cpu_bc) {
+		for_each_possible_cpu(cpu) {
+			/* Online All cores */
+			if (!cpu_online(cpu))
+				asmp_online_cpus(cpu);
+
+			/* Record cpu idle data for next calculation loads */
+			data = &per_cpu(asmp_data, cpu);
+			data->prev_cpu_idle = get_cpu_idle_time(cpu,
+							&data->prev_cpu_wall, 0);
+		}
+		delay_jif = msecs_to_jiffies(2000);
 	}
 
 	queue_delayed_work(asmp_workq, &asmp_work, delay_jif);
@@ -253,7 +278,7 @@ static void __ref asmp_work_fn(struct work_struct *work) {
 
 static void __ref asmp_suspend(void)
 {
-	unsigned int cpu;
+	unsigned int cpu = 0;
 
 	/* stop plug/unplug when suspend */
 	cancel_delayed_work_sync(&asmp_work);
@@ -267,7 +292,7 @@ static void __ref asmp_suspend(void)
 
 static void __ref asmp_resume(void)
 {
-	unsigned int cpu;
+	unsigned int cpu = 0;
 
 	/* Force all cpu's to online when resumed */
 	for_each_possible_cpu(cpu) {
@@ -306,7 +331,8 @@ extern void disable_core_control(bool disable);
 #endif
 static int __ref asmp_start(void)
 {
-	unsigned int cpu;
+	struct asmp_load_data *data = NULL;
+	unsigned int cpu = 0;
 	int ret = 0;
 
 	if (started) {
@@ -321,14 +347,14 @@ static int __ref asmp_start(void)
 	}
 
 	for_each_possible_cpu(cpu) {
-		/* Record cpu idle data for next calculation loads */
-		struct asmp_load_data *data = &per_cpu(asmp_data, cpu);
-		data->prev_cpu_idle = get_cpu_idle_time(cpu,
-						&data->prev_cpu_wall, 0);
-
 		/* Online All cores */
 		if (!cpu_online(cpu))
 			asmp_online_cpus(cpu);
+
+		/* Record cpu idle data for next calculation loads */
+		data = &per_cpu(asmp_data, cpu);
+		data->prev_cpu_idle = get_cpu_idle_time(cpu,
+						&data->prev_cpu_wall, 0);
 	}
 
 	INIT_DELAYED_WORK(&asmp_work, asmp_work_fn);
@@ -355,7 +381,7 @@ err_out:
 
 static void __ref asmp_stop(void)
 {
-	unsigned int cpu;
+	unsigned int cpu = 0;
 
 	if (!started) {
 		pr_info(ASMP_TAG"already disabled\n");
