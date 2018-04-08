@@ -21,6 +21,12 @@
 #include <linux/platform_device.h>
 #include <linux/init.h>
 #include <linux/module.h>
+#ifdef CONFIG_FB
+#include <linux/delay.h>
+#include <linux/workqueue.h>
+#include <linux/notifier.h>
+#include <linux/fb.h>
+#endif
 
 #include "mdss_mdp.h"
 
@@ -39,6 +45,10 @@ struct kcal_lut_data {
 	int hue;
 	int val;
 	int cont;
+#ifdef CONFIG_FB
+	struct work_struct fb_kcal_work;
+	struct notifier_block panel_nb;
+#endif
 };
 
 static uint32_t igc_Table_Inverted[IGC_LUT_ENTRIES] = {
@@ -541,6 +551,55 @@ static DEVICE_ATTR(kcal_val, S_IWUSR | S_IRUGO, kcal_val_show, kcal_val_store);
 static DEVICE_ATTR(kcal_cont, S_IWUSR | S_IRUGO, kcal_cont_show,
 	kcal_cont_store);
 
+#ifdef CONFIG_FB
+static void fb_resume_work(struct work_struct *work)
+{
+	struct kcal_lut_data *lut_data =
+		container_of(work, struct kcal_lut_data, fb_kcal_work);
+
+	if (!lut_data)
+		return;
+
+	mdelay(50); /* give a delayed before update */
+
+	if (lut_data->red < 256 || lut_data->green < 256 ||
+	    lut_data->blue < 256 || lut_data->minimum != 35) {
+		mdss_mdp_kcal_update_pcc(lut_data);
+		mdss_mdp_kcal_display_commit();
+	}
+
+	if (lut_data->hue > 0 || lut_data->sat != 255 ||
+	    lut_data->val != 255 || lut_data->cont != 255) {
+		mdss_mdp_kcal_update_pa(lut_data);
+		mdss_mdp_kcal_display_commit();
+	}
+
+	if (lut_data->invert) {
+		mdss_mdp_kcal_update_igc(lut_data);
+		mdss_mdp_kcal_display_commit();
+	}
+}
+
+static int fb_notifier_callback(struct notifier_block *nb,
+	unsigned long event, void *data)
+{
+	int *blank;
+	struct fb_event *evdata = data;
+	struct kcal_lut_data *lut_data =
+		container_of(nb, struct kcal_lut_data, panel_nb);
+
+	if (evdata && evdata->data && event == FB_EVENT_BLANK && lut_data) {
+		blank = evdata->data;
+		if (*blank == FB_BLANK_UNBLANK) {
+			if (lut_data->enable)
+				schedule_work(&lut_data->fb_kcal_work);
+		}
+	}
+
+	return 0;
+}
+#endif
+
 static int kcal_ctrl_probe(struct platform_device *pdev)
 {
 	int ret;
@@ -571,6 +630,16 @@ static int kcal_ctrl_probe(struct platform_device *pdev)
 	mdss_mdp_kcal_update_igc(lut_data);
 	mdss_mdp_kcal_display_commit();
 
+#ifdef CONFIG_FB
+	INIT_WORK(&lut_data->fb_kcal_work, fb_resume_work);
+	lut_data->panel_nb.notifier_call = fb_notifier_callback;
+	ret = fb_register_client(&lut_data->panel_nb);
+	if (ret) {
+		pr_err("%s: unable to register fb notifier\n", __func__);
+		return ret;
+	}
+#endif
+
 	ret = device_create_file(&pdev->dev, &dev_attr_kcal);
 	ret |= device_create_file(&pdev->dev, &dev_attr_kcal_min);
 	ret |= device_create_file(&pdev->dev, &dev_attr_kcal_enable);
@@ -589,6 +658,13 @@ static int kcal_ctrl_probe(struct platform_device *pdev)
 
 static int kcal_ctrl_remove(struct platform_device *pdev)
 {
+	struct kcal_lut_data *lut_data = platform_get_drvdata(pdev);
+
+#ifdef CONFIG_FB
+	lut_data->panel_nb.notifier_call = 0;
+	fb_unregister_client(&lut_data->panel_nb);
+#endif
+
 	device_remove_file(&pdev->dev, &dev_attr_kcal);
 	device_remove_file(&pdev->dev, &dev_attr_kcal_min);
 	device_remove_file(&pdev->dev, &dev_attr_kcal_enable);
