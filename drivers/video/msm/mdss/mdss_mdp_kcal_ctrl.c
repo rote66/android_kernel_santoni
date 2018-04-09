@@ -45,6 +45,12 @@ struct kcal_lut_data {
 	int val;
 	int cont;
 #ifdef CONFIG_FB
+	bool rgb_scron;
+	bool min_scron;
+	bool sat_scron;
+	bool hue_scron;
+	bool val_scron;
+	bool cont_scron;
 	struct work_struct fb_kcal_work;
 	struct notifier_block panel_nb;
 #endif
@@ -214,6 +220,14 @@ static ssize_t kcal_store(struct device *dev, struct device_attribute *attr,
 	lut_data->green = kcal_g;
 	lut_data->blue = kcal_b;
 
+#ifdef CONFIG_FB
+	if (lut_data->red < 256 ||
+	    lut_data->green < 256 || lut_data->blue < 256)
+		lut_data->rgb_scron = true;
+	else
+		lut_data->rgb_scron = false;
+#endif
+
 	mdss_mdp_kcal_update_pcc(lut_data);
 	mdss_mdp_kcal_display_commit();
 
@@ -240,6 +254,13 @@ static ssize_t kcal_min_store(struct device *dev,
 		return -EINVAL;
 
 	lut_data->minimum = kcal_min;
+
+#ifdef CONFIG_FB
+	if (lut_data->minimum == 35)
+		lut_data->min_scron = false;
+	else
+		lut_data->min_scron = true;
+#endif
 
 	mdss_mdp_kcal_update_pcc(lut_data);
 	mdss_mdp_kcal_display_commit();
@@ -295,6 +316,13 @@ static ssize_t kcal_sat_store(struct device *dev,
 
 	lut_data->sat = kcal_sat;
 
+#ifdef CONFIG_FB
+	if (lut_data->sat == 255)
+		lut_data->sat_scron = false;
+	else
+		lut_data->sat_scron = true;
+#endif
+
 	mdss_mdp_kcal_update_pa(lut_data);
 	mdss_mdp_kcal_display_commit();
 
@@ -320,6 +348,13 @@ static ssize_t kcal_hue_store(struct device *dev,
 		return -EINVAL;
 
 	lut_data->hue = kcal_hue;
+
+#ifdef CONFIG_FB
+	if (lut_data->hue == 0)
+		lut_data->hue_scron = false;
+	else
+		lut_data->hue_scron = true;
+#endif
 
 	mdss_mdp_kcal_update_pa(lut_data);
 	mdss_mdp_kcal_display_commit();
@@ -347,6 +382,13 @@ static ssize_t kcal_val_store(struct device *dev,
 
 	lut_data->val = kcal_val;
 
+#ifdef CONFIG_FB
+	if (lut_data->val == 255)
+		lut_data->val_scron = false;
+	else
+		lut_data->val_scron = true;
+#endif
+
 	mdss_mdp_kcal_update_pa(lut_data);
 	mdss_mdp_kcal_display_commit();
 
@@ -372,6 +414,13 @@ static ssize_t kcal_cont_store(struct device *dev,
 		return -EINVAL;
 
 	lut_data->cont = kcal_cont;
+
+#ifdef CONFIG_FB
+	if (lut_data->cont == 255)
+		lut_data->cont_scron = false;
+	else
+		lut_data->cont_scron = true;
+#endif
 
 	mdss_mdp_kcal_update_pa(lut_data);
 	mdss_mdp_kcal_display_commit();
@@ -408,17 +457,14 @@ static void fb_resume_work(struct work_struct *work)
 
 	mdelay(50); /* give a delayed before update */
 
-	if (lut_data->red < 256 || lut_data->green < 256 ||
-	    lut_data->blue < 256 || lut_data->minimum != 35) {
+	if (lut_data->rgb_scron || lut_data->min_scron)
 		mdss_mdp_kcal_update_pcc(lut_data);
-		mdss_mdp_kcal_display_commit();
-	}
 
-	if (lut_data->hue > 0 || lut_data->sat != 255 ||
-	    lut_data->val != 255 || lut_data->cont != 255) {
+	if (lut_data->sat_scron || lut_data->hue_scron ||
+	    lut_data->val_scron || lut_data->cont_scron)
 		mdss_mdp_kcal_update_pa(lut_data);
-		mdss_mdp_kcal_display_commit();
-	}
+
+	mdss_mdp_kcal_display_commit();
 }
 
 static int fb_notifier_callback(struct notifier_block *nb,
@@ -432,7 +478,10 @@ static int fb_notifier_callback(struct notifier_block *nb,
 	if (evdata && evdata->data && event == FB_EVENT_BLANK && lut_data) {
 		blank = evdata->data;
 		if (*blank == FB_BLANK_UNBLANK) {
-			if (lut_data->enable)
+			if (lut_data->enable && (lut_data->rgb_scron ||
+			    lut_data->min_scron || lut_data->sat_scron ||
+			    lut_data->hue_scron || lut_data->val_scron ||
+			    lut_data->cont_scron))
 				schedule_work(&lut_data->fb_kcal_work);
 		}
 	}
@@ -464,6 +513,14 @@ static int kcal_ctrl_probe(struct platform_device *pdev)
 	lut_data->sat = DEF_PA;
 	lut_data->val = DEF_PA;
 	lut_data->cont = DEF_PA;
+#ifdef CONFIG_FB
+	lut_data->rgb_scron = false;
+	lut_data->min_scron = false;
+	lut_data->sat_scron = false;
+	lut_data->hue_scron = false;
+	lut_data->val_scron = false;
+	lut_data->cont_scron = false;
+#endif
 
 	mdss_mdp_kcal_update_pcc(lut_data);
 	mdss_mdp_kcal_update_pa(lut_data);
@@ -496,9 +553,9 @@ static int kcal_ctrl_probe(struct platform_device *pdev)
 
 static int kcal_ctrl_remove(struct platform_device *pdev)
 {
+#ifdef CONFIG_FB
 	struct kcal_lut_data *lut_data = platform_get_drvdata(pdev);
 
-#ifdef CONFIG_FB
 	lut_data->panel_nb.notifier_call = 0;
 	fb_unregister_client(&lut_data->panel_nb);
 #endif
