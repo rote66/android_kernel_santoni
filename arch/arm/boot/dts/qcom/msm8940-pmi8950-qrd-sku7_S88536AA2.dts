@@ -62,7 +62,7 @@
 	qcom,fg-cc-cv-threshold-mv = <4390>;
 	qcom,cl-max-increment-deciperc = <1>;
 	qcom,cl-max-decrement-deciperc = <1>;
-	qcom,fg-delta-soc = <1>;
+	qcom,fg-delta-soc = <2>;
 	qcom,bad-battery-detection-enable;
 	qcom,hold-soc-while-full;
 	qcom,thermal-coefficients = [B7 85 B2 49 71 35];
