@@ -82,6 +82,30 @@ TRACE_EVENT(cpu_idle_exit,
 		__entry->success)
 );
 
+TRACE_EVENT(cluster_cfg_rcgr,
+
+		TP_PROTO(const char *name, int value, bool save_restore),
+
+		TP_ARGS(name, value, save_restore),
+
+		TP_STRUCT__entry(
+		__field(const char *, name)
+		__field(int, value)
+		__field(bool, save_restore)
+		),
+
+		TP_fast_assign(
+		__entry->name = name;
+		__entry->value = value;
+		__entry->save_restore = save_restore;
+		),
+
+		TP_printk("cluster_name:%s val:%d save_restore:%d",
+		__entry->name,
+		__entry->value,
+		__entry->save_restore)
+);
+
 DECLARE_EVENT_CLASS(cpu_freq,
 
 	TP_PROTO(int cpu, unsigned long cpu_clk, unsigned long l2_clk),
