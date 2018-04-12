@@ -1,6 +1,6 @@
 assert(getprop("ro.product.device") == "santoni" || getprop("ro.build.product") == "santoni" || abort("E3004: This package is for device: santoni; this device is " + getprop("ro.product.device") + "."););
 ifelse(is_mounted("/system"), unmount("/system"));
-mount("ext4", "EMMC", "/dev/block/bootdevice/by-name/system", "/system", "max_batch_time=0,commit=1,data=ordered,barrier=1,errors=panic,nodelalloc");
+mount("ext4", "EMMC", "/dev/block/bootdevice/by-name/system", "/system", "");
 ui_print("-----------------------------------");
 ui_print("-         Clarity Kernel          -");
 ui_print("-----------------------------------");
