@@ -2,6 +2,7 @@
 
 VER=$1
 SUB=$2
+TP=$3
 
 rm -f repack_zip/clarity/zImage
 rm -f repack_zip/system/lib/modules/*.ko
@@ -18,7 +19,12 @@ find -name "*.ko" -exec mv {} repack_zip/system/lib/modules \;
 cd repack_zip
 
 if [ ! $VER ] && [ ! $SUB ]; then
-	zip -r ../../release_testing/Clarity-Testing-MIUI_HM4X.zip *
-else
+	VER=0
+	SUB=0
+fi
+
+if [ ! $TP ]; then
 	zip -r ../../release_santoni/Clarity-v$VER.$SUB-MIUI_HM4X.zip *
+else
+	zip -r ../../release_santoni/Clarity-$TP-v$VER.$SUB-MIUI_HM4X.zip *
 fi
