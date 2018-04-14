@@ -55,6 +55,14 @@ config CPU_FREQ_STAT_DETAILS
 
 	  If in doubt, say N.
 
+config CPU_FREQ_OVERCLOCK
+	bool "Enable specific CPU frequency overclock"
+	depends on CPU_FREQ
+	default n
+	help
+	  Enable this to get specific overclock
+	  and forcing to selecting speed bin 1.
+
 choice
 	prompt "Default CPUFreq governor"
 	default CPU_FREQ_DEFAULT_GOV_USERSPACE if ARM_SA1100_CPUFREQ || ARM_SA1110_CPUFREQ
