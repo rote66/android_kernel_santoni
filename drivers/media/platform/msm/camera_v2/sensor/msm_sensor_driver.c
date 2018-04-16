@@ -25,8 +25,6 @@
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
 
 #define SENSOR_MAX_MOUNTANGLE (360)
-char fusionid_back[64] = { 0 };
-char fusionid_front[64] = { 0 };
 
 static struct v4l2_file_operations msm_sensor_v4l2_subdev_fops;
 static int32_t msm_sensor_driver_platform_probe(struct platform_device *pdev);
