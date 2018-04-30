@@ -34,7 +34,7 @@ static int laziness;
 int simple_gpu_algorithm(int level, int *val,
 			struct devfreq_msm_adreno_tz_data *priv)
 {
-	int ret = 0;
+	int ret;
 
 	/* sync memory before sending the commands */
 	__iowmb();

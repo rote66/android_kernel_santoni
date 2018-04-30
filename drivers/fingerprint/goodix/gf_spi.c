@@ -273,12 +273,9 @@ static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		return -ENODEV;
 
 	if (_IOC_DIR(cmd) & _IOC_READ)
-		retval =
-				!access_ok(VERIFY_WRITE, (void __user *)arg,
-				_IOC_SIZE(cmd));
+		retval = !access_ok(VERIFY_WRITE, (void __user *)arg, _IOC_SIZE(cmd));
 	if ((retval == 0) && (_IOC_DIR(cmd) & _IOC_WRITE))
-		retval =
-				!access_ok(VERIFY_READ, (void __user *)arg, _IOC_SIZE(cmd));
+		retval = !access_ok(VERIFY_READ, (void __user *)arg, _IOC_SIZE(cmd));
 	if (retval)
 		return -EFAULT;
 
@@ -379,18 +376,20 @@ static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case GF_IOC_POWER_ON:
 		if (gf_dev->device_available == 1)
 			pr_info("Sensor has already powered-on.\n");
-		else
+		else {
 			gf_power_on(gf_dev);
 			gf_dev->device_available = 1;
+		}
 		break;
 	case GF_IOC_POWER_OFF:
 		if (gf_dev->device_available == 0)
 			pr_info("Sensor has already powered-off.\n");
-		else
+		else {
 			gf_power_off(gf_dev);
 			gf_dev->device_available = 0;
+		}
 		break;
-		default:
+	default:
 		gf_dbg("Unsupport cmd:0x%x\n", cmd);
 		break;
 	}
@@ -497,10 +496,6 @@ static int gf_open(struct inode *inode, struct file *filp)
 			gf_dbg("Succeed to open device. irq = %d\n",
 					gf_dev->irq);
 
-
-
-
-
 			gf_dev->device_available = 1;
 		}
 	} else {
@@ -537,18 +532,14 @@ static int gf_release(struct inode *inode, struct file *filp)
 
 	gf_dev->users--;
 	if (!gf_dev->users) {
+		gf_dbg("disble_irq. irq = %d\n", gf_dev->irq);
+		gf_disable_irq(gf_dev);
 
-	gf_dbg("disble_irq. irq = %d\n", gf_dev->irq);
-	gf_disable_irq(gf_dev);
+		devm_free_irq(&gf_dev->spi->dev, gf_dev->irq, gf_dev);
 
-
-
-
-	devm_free_irq(&gf_dev->spi->dev, gf_dev->irq, gf_dev);
-
-/*power off the sensor*/
-	gf_dev->device_available = 0;
-	gf_power_off(gf_dev);
+		/*power off the sensor*/
+		gf_dev->device_available = 0;
+		gf_power_off(gf_dev);
 	}
 	mutex_unlock(&device_list_lock);
 	FUNC_EXIT();
@@ -776,10 +767,10 @@ static int gf_remove(struct platform_device *pdev)
 	if (gf_dev->irq)
 		free_irq(gf_dev->irq, gf_dev);
 
-	if (gf_dev->input != NULL)
+	if (gf_dev->input != NULL) {
 		input_unregister_device(gf_dev->input);
 		input_free_device(gf_dev->input);
-
+	}
 
 	mutex_lock(&device_list_lock);
 	list_del(&gf_dev->device_entry);
@@ -787,8 +778,7 @@ static int gf_remove(struct platform_device *pdev)
 	clear_bit(MINOR(gf_dev->devt), minors);
 	if (gf_dev->users == 0)
 		kfree(gf_dev);
-
-		 mutex_unlock(&device_list_lock);
+	mutex_unlock(&device_list_lock);
 
 	wake_lock_destroy(&gf_dev->ttw_wl);
 
@@ -802,8 +792,6 @@ static int gf_suspend(struct spi_device *spi, pm_message_t mesg)
 static int gf_suspend(struct platform_device *pdev, pm_message_t state)
 #endif
 {
-
-
 	gf_dbg("gf_suspend_test.\n");
 	return 0;
 }
@@ -814,7 +802,6 @@ static int gf_resume(struct spi_device *spi)
 static int gf_resume(struct platform_device *pdev)
 #endif
 {
-
 	gf_dbg("gf_resume_test.\n");
 	return 0;
 }
@@ -832,11 +819,8 @@ static struct platform_driver gf_driver = {
 	.driver = {
 		.name = GF_DEV_NAME,
 		.owner = THIS_MODULE,
-#if defined(USE_SPI_BUS)
-
-#endif
 		.of_match_table = gx_match_table,
-		},
+	},
 	.probe = gf_probe,
 	.remove = gf_remove,
 	.suspend = gf_suspend,
@@ -880,7 +864,7 @@ static int __init gf_init(void)
 	}
 
 #ifdef GF_NETLINK_ENABLE
-		 netlink_init();
+	netlink_init();
 #endif
 	pr_info(" status = 0x%x\n", status);
 	FUNC_EXIT();
