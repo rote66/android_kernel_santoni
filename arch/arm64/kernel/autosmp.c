@@ -77,7 +77,7 @@ static struct asmp_param_struct {
 	.cycle_down = 1,
 };
 
-static unsigned int cycle = 0, delay0 = 0;
+static unsigned int cycle_lc = 0, cycle_bc = 0, delay0 = 0;
 static unsigned long delay_jif = 0;
 int asmp_enabled __read_mostly = 0;
 
@@ -133,7 +133,8 @@ static void __ref asmp_work_fn(struct work_struct *work) {
 	if (!cpu_online(0))
 		cpu_up(0);
 
-	cycle++;
+	cycle_lc++;
+	cycle_bc++;
 
 	if (asmp_param.delay != delay0) {
 		delay0 = asmp_param.delay;
@@ -194,17 +195,19 @@ static void __ref asmp_work_fn(struct work_struct *work) {
 	/* hotplug one core if all online cores are over up_load limit */
 	if (slow_load_lc > up_load_lc) {
 		if ((nr_cpu_online_lc < max_cpu_lc) &&
-		    (cycle >= asmp_param.cycle_up)) {
+		    (cycle_lc >= asmp_param.cycle_up)) {
 			cpu = cpumask_next_zero(4, cpu_online_mask);
-			cpu_up(cpu);
-			cycle = 0;
+			if (!cpu_online(cpu)) {
+				cpu_up(cpu);
+				cycle_lc = 0;
+			}
 		}
 	/* unplug slowest core if all online cores are under down_load limit */
 	} else if ((slow_cpu_lc > 4) && (fast_load_lc < down_load_lc)) {
 		if ((nr_cpu_online_lc > min_cpu_lc) &&
-		    (cycle >= asmp_param.cycle_down)) {
+		    (cycle_lc >= asmp_param.cycle_down)) {
  			cpu_down(slow_cpu_lc);
-			cycle = 0;
+			cycle_lc = 0;
 		}
 	}
 
@@ -221,17 +224,19 @@ static void __ref asmp_work_fn(struct work_struct *work) {
 	/* hotplug one core if all online cores are over up_load limit */
 	if (slow_load_bc > up_load_bc) {
 		if ((nr_cpu_online_bc < max_cpu_bc) &&
-		    (cycle >= asmp_param.cycle_up)) {
+		    (cycle_bc >= asmp_param.cycle_up)) {
 			cpu = cpumask_next_zero(0, cpu_online_mask);
-			cpu_up(cpu);
-			cycle = 0;
+			if (!cpu_online(cpu)) {
+				cpu_up(cpu);
+				cycle_bc = 0;
+			}
 		}
 	/* unplug slowest core if all online cores are under down_load limit */
 	} else if (slow_cpu_bc && (fast_load_bc < down_load_bc)) {
 		if ((nr_cpu_online_bc > min_cpu_bc) &&
-		    (cycle >= asmp_param.cycle_down)) {
+		    (cycle_bc >= asmp_param.cycle_down)) {
  			cpu_down(slow_cpu_bc);
-			cycle = 0;
+			cycle_bc = 0;
 		}
 	}
 
@@ -383,6 +388,9 @@ static void __ref asmp_stop(void)
 #ifdef CONFIG_AIO_HOTPLUG
 extern int AiO_HotPlug;
 #endif
+#ifdef CONFIG_THERMAL_MONITOR
+extern void external_core_control_panel(bool enabled);
+#endif
 static int set_enabled(const char *val,
 			     const struct kernel_param *kp)
 {
@@ -400,6 +408,9 @@ static int set_enabled(const char *val,
 #ifdef CONFIG_SCHED_CORE_CTL
 		disable_core_control(true);
 #endif
+#ifdef CONFIG_THERMAL_MONITOR
+		external_core_control_panel(false);
+#endif
 		asmp_start();
 	} else {
 #ifdef CONFIG_AIO_HOTPLUG
@@ -409,6 +420,9 @@ static int set_enabled(const char *val,
 		asmp_stop();
 #ifdef CONFIG_SCHED_CORE_CTL
 		disable_core_control(false);
+#endif
+#ifdef CONFIG_THERMAL_MONITOR
+		external_core_control_panel(true);
 #endif
 	}
 	return ret;

@@ -16,15 +16,4 @@ fi
 mv arch/arm64/boot/Image.gz-dtb repack_zip/clarity/zImage
 find -name "*.ko" -exec mv {} repack_zip/system/lib/modules \;
 
-#cd repack_zip
 
-#if [ ! $VER ] && [ ! $SUB ]; then
-#	VER=0
-#	SUB=0
-#fi
-
-#if [ ! $TP ]; then
-#	zip -r ../../release_santoni/Clarity-v$VER.$SUB-MIUI_HM4X.zip *
-#else
-#	zip -r ../../release_santoni/Clarity-$TP-v$VER.$SUB-MIUI_HM4X.zip *
-#fi
