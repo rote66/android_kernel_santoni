@@ -2,7 +2,6 @@
 
 VER=$1
 SUB=$2
-TP=$3
 
 rm -f repack_zip/clarity/zImage
 rm -f repack_zip/system/lib/modules/*.ko

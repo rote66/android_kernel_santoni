@@ -440,7 +440,7 @@
 
 	qcom,bcl {
 		compatible = "qcom,bcl";
-		#qcom,bcl-enable;
+		qcom,bcl-enable;
 		qcom,bcl-framework-interface;
 		qcom,bcl-freq-control-list = <&CPU0 &CPU1 &CPU2 &CPU3
 						&CPU4 &CPU5 &CPU6 &CPU7>;
@@ -452,7 +452,7 @@
 			qcom,mitigation-freq-khz = <998400>;
 			qcom,vph-high-threshold-uv = <3500000>;
 			qcom,vph-low-threshold-uv = <3200000>;
-			qcom,soc-low-threshold = <10>;
+			qcom,soc-low-threshold = <5>;
 			qcom,thermal-handle = <&msm_thermal_freq>;
 		};
 	};
@@ -722,8 +722,7 @@
 			< 1248000000 4>,
 			< 1344000000 5>,
 			< 1401000000 6>,
-			< 1497600000 7>,
-			< 1574400000 8>;
+			< 1497600000 7>;
 
 		qcom,speed1-bin-v0-cci =
 			<          0 0>,
@@ -773,8 +772,7 @@
 			 < 1248000 >,
 			 < 1344000 >,
 			 < 1401000 >,
-			 < 1497600 >,
-			 < 1574400 >;
+			 < 1497600 >;
 
 		qcom,cpufreq-table-4 =
 			 <  768000 >,
@@ -847,8 +845,7 @@
 			< 1094400  5053 >,	/* NOM   */
 			< 1248000  5712 >,	/* NOM+  */
 			< 1344000  7031 >,
-			< 1497600  7031 >,	/* TURBO */
-			< 1574400  7031 >;	/* TURBO OC */
+			< 1497600  7031 >;	/* TURBO */
 		cpu-to-dev-map-4 =
 			<  806400  2929 >,	/* SVS  */
 			<  902400  5053 >,	/* NOM   */
@@ -863,8 +860,7 @@
 			< 1094400  400000 >,	/* NOM   */
 			< 1248000  533333 >,	/* NOM+  */
 			< 1344000  533333 >,
-			< 1497600  533333 >,	/* TURBO */
-			< 1574400  533333 >;	/* TURBO OC */
+			< 1497600  533333 >;	/* TURBO */
 		cpu-to-dev-map-4 =
 			<  806400  400000 >,	/* SVS  */
 			<  902400  400000 >,	/* NOM   */
@@ -876,8 +872,7 @@
 			target-dev = <&mincpubw>;
 			cpu-to-dev-map-0 =
 				< 1094400 2929 >,
-				< 1497600 4248 >,
-				< 1574400 4248 >; /* OC */
+				< 1497600 4248 >;
 			cpu-to-dev-map-4 =
 				<  998400 2929 >,
 				< 1209600 4248 >;

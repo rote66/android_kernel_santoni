@@ -772,6 +772,7 @@ static void __init early_init_dt_check_for_initrd(unsigned long node)
 	initrd_start = (unsigned long)__va(start);
 	initrd_end = (unsigned long)__va(end);
 	initrd_below_start_ok = 1;
+
 	early_init_dt_check_for_powerup_reason(node);
 
 	pr_debug("initrd_start=0x%llx  initrd_end=0x%llx\n",

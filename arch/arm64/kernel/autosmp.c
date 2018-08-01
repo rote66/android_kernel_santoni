@@ -31,6 +31,7 @@
 #include <linux/hrtimer.h>
 #include <linux/notifier.h>
 #include <linux/fb.h>
+#include <linux/msm_thermal.h>
 
 #define ASMP_TAG "AutoSMP: "
 
@@ -126,6 +127,9 @@ static void __ref asmp_work_fn(struct work_struct *work) {
 	unsigned int max_cpu_lc = 0, max_cpu_bc = 0;
 	unsigned int min_cpu_lc = 0, min_cpu_bc = 0;
 	int nr_cpu_online_lc = 0, nr_cpu_online_bc = 0;
+#ifdef CONFIG_THERMAL_MONITOR
+	bool mitigation_thermal = mitigation_thermal_core_control();
+#endif
 
 	/* Perform always check cpu 0/4 */
 	if (!cpu_online(4))
@@ -220,6 +224,13 @@ static void __ref asmp_work_fn(struct work_struct *work) {
 	/* Always check cpu 0 before + up nr */
 	if (cpu_online(0))
 		nr_cpu_online_bc += 1;
+
+#ifdef CONFIG_THERMAL_MONITOR
+	if (mitigation_thermal) {
+		if (max_cpu_bc > 2)
+			max_cpu_bc = 2;
+	}
+#endif
 
 	/* hotplug one core if all online cores are over up_load limit */
 	if (slow_load_bc > up_load_bc) {
