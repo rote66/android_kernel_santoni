@@ -15,4 +15,6 @@ fi
 mv arch/arm64/boot/Image.gz-dtb repack_zip/clarity/zImage
 find -name "*.ko" -exec mv {} repack_zip/system/lib/modules \;
 
-
+cd repack_zip
+zip -r kernel.zip *
+mv kernel.zip ../
