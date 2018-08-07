@@ -1424,12 +1424,6 @@ static ssize_t snd_pcm_oss_write1(struct snd_pcm_substream *substream, const cha
 	if (atomic_read(&substream->mmap_count))
 		return -ENXIO;
 
-
-	if ((tmp = snd_pcm_oss_make_ready(substream)) < 0)
-		return tmp;
-	mutex_lock(&runtime->oss.params_lock);
-	while (bytes > 0) {
-
 	atomic_inc(&runtime->oss.rw_ref);
 	while (bytes > 0) {
 		if (mutex_lock_interruptible(&runtime->oss.params_lock)) {
@@ -1487,12 +1481,6 @@ static ssize_t snd_pcm_oss_write1(struct snd_pcm_substream *substream, const cha
 		}
 	}
 
-	mutex_unlock(&runtime->oss.params_lock);
-	return xfer;
-
- err:
-	mutex_unlock(&runtime->oss.params_lock);
-
 	atomic_dec(&runtime->oss.rw_ref);
 
 	return xfer > 0 ? (snd_pcm_sframes_t)xfer : tmp;
@@ -1540,12 +1528,6 @@ static ssize_t snd_pcm_oss_read1(struct snd_pcm_substream *substream, char __use
 	if (atomic_read(&substream->mmap_count))
 		return -ENXIO;
 
-
-	if ((tmp = snd_pcm_oss_make_ready(substream)) < 0)
-		return tmp;
-	mutex_lock(&runtime->oss.params_lock);
-	while (bytes > 0) {
-
 	atomic_inc(&runtime->oss.rw_ref);
 	while (bytes > 0) {
 		if (mutex_lock_interruptible(&runtime->oss.params_lock)) {
@@ -1588,14 +1570,7 @@ static ssize_t snd_pcm_oss_read1(struct snd_pcm_substream *substream, char __use
 		}
 	}
 
-	mutex_unlock(&runtime->oss.params_lock);
-	return xfer;
-
- err:
-	mutex_unlock(&runtime->oss.params_lock);
-
 	atomic_dec(&runtime->oss.rw_ref);
-
 	return xfer > 0 ? (snd_pcm_sframes_t)xfer : tmp;
 }
 
