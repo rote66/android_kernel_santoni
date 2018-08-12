@@ -85,6 +85,9 @@ struct netfront_cb {
 /* IRQ name is queue name with "-tx" or "-rx" appended */
 #define IRQ_NAME_SIZE (QUEUE_NAME_SIZE + 3)
 
+static DECLARE_WAIT_QUEUE_HEAD(module_load_q);
+static DECLARE_WAIT_QUEUE_HEAD(module_unload_q);
+
 struct netfront_stats {
 	u64			rx_packets;
 	u64			tx_packets;
@@ -1355,6 +1358,13 @@ static struct net_device *xennet_create_dev(struct xenbus_device *dev)
 	np->netdev = netdev;
 
 	netif_carrier_off(netdev);
+
+	xenbus_switch_state(dev, XenbusStateInitialising);
+	wait_event(module_load_q,
+			   xenbus_read_driver_state(dev->otherend) !=
+			   XenbusStateClosed &&
+			   xenbus_read_driver_state(dev->otherend) !=
+			   XenbusStateUnknown);
 
 	return netdev;
 
